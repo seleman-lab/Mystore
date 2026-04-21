@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify OTP - MyStore</title>
+    <link rel="icon" href="assets/logo.png" type="/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .otp-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .otp-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .otp-card h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .otp-card .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .otp-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .otp-input-group {
+            margin: 30px 0;
+        }
+
+        .otp-input-group label {
+            display: block;
+            text-align: left;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .otp-input-group input {
+            width: 100%;
+            padding: 15px;
+            font-size: 20px;
+            letter-spacing: 10px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            transition: border-color 0.3s;
+            font-family: monospace;
+        }
+
+        .otp-input-group input:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+            display: none;
+            text-align: left;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+            display: none;
+            text-align: left;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            color: #0c5aa0;
+            text-align: left;
+        }
+
+        .btn-verify {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-verify:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-verify:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-back {
+            width: 100%;
+            padding: 12px;
+            background: #f0f0f0;
+            color: #333;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-back:hover {
+            background: #e0e0e0;
+        }
+
+        .resend-otp {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .resend-otp a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .resend-otp a:hover {
+            text-decoration: underline;
+        }
+
+        .timer {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        @media (max-width: 600px) {
+            .otp-card {
+                padding: 20px;
+            }
+
+            .otp-card h1 {
+                font-size: 22px;
+            }
+
+            .otp-icon {
+                font-size: 40px;
+            }
+
+            .otp-input-group input {
+                font-size: 18px;
+                letter-spacing: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="nav-brand">MyStore</a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="login.html">Login</a>
+                <a href="signup.html">Sign Up</a>
+                <a href="">Help</a>
+                <a href="https://seleman.edgeone.dev" target="_blank"><span style="color: rgb(199, 199, 199);">Sele</span><span style="color: #8076f3;">man</span></a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="otp-wrapper">
+        <div class="otp-card">
+            <div class="otp-icon">📧</div>
+            <h1>Verify OTP</h1>
+            <p class="subtitle">Enter the 6-digit OTP code sent to your email</p>
+
+            <div class="error-message" id="error-message"></div>
+            <div class="success-message" id="success-message"></div>
+
+            <div class="info-box">
+                ℹ️ The OTP code is valid for 10 minutes. Check your registered email.
+            </div>
+
+            <form id="otp-verification-form">
+                <div class="otp-input-group">
+                    <label for="otp-code">Enter OTP Code</label>
+                    <input 
+                        type="text" 
+                        id="otp-code" 
+                        class="form-control" 
+                        required 
+                        maxlength="6"
+                        placeholder="000000"
+                        pattern="[0-9]{6}"
+                        inputmode="numeric"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <button type="submit" class="btn-verify" id="verify-btn">Verify OTP</button>
+                <button type="button" class="btn-back" id="back-btn">Back to Security Questions</button>
+            </form>
+
+            <div class="resend-otp">
+                Didn't receive the code? 
+                <a href="#" id="resend-link" onclick="resendOTP(event)">Resend OTP</a>
+                <span id="timer"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // OTP Verification Page Logic
+        document.addEventListener('DOMContentLoaded', async () => {
+            const otpForm = document.getElementById('otp-verification-form');
+            const verifyBtn = document.getElementById('verify-btn');
+            const backBtn = document.getElementById('back-btn');
+            const otpInput = document.getElementById('otp-code');
+            const errorMsg = document.getElementById('error-message');
+            const successMsg = document.getElementById('success-message');
+
+            // Get email from URL parameter or sessionStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            let userEmail = urlParams.get('email') || sessionStorage.getItem('resetEmail');
+
+            if (!userEmail) {
+                errorMsg.textContent = 'No email provided. Please start from the password recovery page.';
+                errorMsg.style.display = 'block';
+                verifyBtn.disabled = true;
+                return;
+            }
+
+            // Auto-focus on OTP input
+            otpInput.focus();
+
+            // Form submission
+            otpForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                errorMsg.style.display = 'none';
+                successMsg.style.display = 'none';
+
+                const otp = otpInput.value.trim();
+
+                if (!otp || otp.length !== 6) {
+                    errorMsg.textContent = 'Please enter a valid 6-digit OTP code';
+                    errorMsg.style.display = 'block';
+                    return;
+                }
+
+                // Show loading state
+                verifyBtn.disabled = true;
+                const originalText = verifyBtn.innerText;
+                verifyBtn.innerText = 'Verifying...';
+
+                try {
+                    const response = await fetch('/verify-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: userEmail, otp })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        // Store the resetToken in sessionStorage
+                        sessionStorage.setItem('resetToken', data.resetToken);
+                        
+                        successMsg.innerHTML = '<strong>✓ OTP Verified!</strong> Redirecting to password reset page...';
+                        successMsg.style.display = 'block';
+
+                        // Redirect after 2 seconds
+                        setTimeout(() => {
+                            window.location.href = 'reset.html';
+                        }, 2000);
+                    } else {
+                        errorMsg.textContent = data.error || 'Failed to verify OTP';
+                        errorMsg.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error("Error verifying OTP:", error);
+                    errorMsg.textContent = 'A network error occurred. Please try again.';
+                    errorMsg.style.display = 'block';
+                } finally {
+                    verifyBtn.disabled = false;
+                    verifyBtn.innerText = originalText;
+                }
+            });
+
+            // Back button
+            backBtn.addEventListener('click', () => {
+                window.location.href = `answer-questions.html?email=${encodeURIComponent(userEmail)}`;
+            });
+
+            // Format input to only allow numbers
+            otpInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                if (e.target.value.length === 6) {
+                    e.target.blur();
+                }
+            });
+        });
+
+        // Resend OTP function
+        function resendOTP(e) {
+            e.preventDefault();
+            const userEmail = sessionStorage.getItem('resetEmail');
+            
+            if (!userEmail) {
+                alert('Email not found. Please start over.');
+                return;
+            }
+
+            const resendLink = document.getElementById('resend-link');
+            resendLink.style.pointerEvents = 'none';
+            resendLink.style.opacity = '0.5';
+            resendLink.innerText = 'Sending...';
+
+            // Disable for 30 seconds
+            let countdown = 30;
+            const timer = setInterval(() => {
+                countdown--;
+                document.getElementById('timer').innerHTML = ` (${countdown}s)`;
+                if (countdown === 0) {
+                    clearInterval(timer);
+                    resendLink.style.pointerEvents = 'auto';
+                    resendLink.style.opacity = '1';
+                    resendLink.innerText = 'Resend OTP';
+                    document.getElementById('timer').innerHTML = '';
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

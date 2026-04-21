@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Password - MyStore</title>
+    <link rel="icon" href="assets/logo.png" type="/x-icon">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="nav-brand">MyStore</a>
+        </div>
+    </nav>
+
+    <main class="auth-wrapper">
+        <div class="card auth-card">
+            <h2>Reset Password</h2>
+            <p class="subtitle">Enter your new secure password.</p>
+            
+            <form id="reset-form">
+                <div class="form-group">
+                    <label for="password">New Password</label>
+                    <input type="password" id="password" class="form-control" required minlength="8" placeholder="At least 8 characters">
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm-password">Confirm New Password</label>
+                    <input type="password" id="confirm-password" class="form-control" required placeholder="Confirm your password">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%" id="reset-btn">Reset Password</button>
+            </form>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

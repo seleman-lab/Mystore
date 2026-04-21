@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyStore - Sign Up</title>
+    <link rel="icon" href="assets/logo.png" type="/x-icon">
+    <meta name="description" content="Create a new MyStore account.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="nav-brand">MyStore</a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
+                &#9776;
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="login.html">Login</a>
+                <a href="">Help</a>
+                <a href="signup.html" class="active btn btn-primary" style="color: #ffffff;">Sign Up</a>
+                <a href="https://seleman.edgeone.dev" target="_blank"><span style="color: rgb(199, 199, 199);">Sele</span><span style="color: #8076f3;">man</span></a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="auth-wrapper">
+        <div class="card auth-card">
+            <h2>Create an Account</h2>
+            <p class="subtitle">Join MyStore today.</p>
+            
+            <form id="signup-form">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" class="form-control" placeholder="Dr Deleman" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="form-control" placeholder="seleman@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" class="form-control" placeholder="+250 7** *** ***" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirm Password</label>
+                    <input type="password" id="confirm-password" class="form-control" placeholder="••••••••" required>
+                </div>
+
+                <hr style="margin: 1.5rem 0; opacity: 0.3;">
+                <h4 style="margin-top: 1.5rem; margin-bottom: 1rem;">Security Questions (for password recovery)</h4>
+                <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">Answer these questions carefully. You'll need them to reset your password if you forget it.</p>
+                
+                <div class="form-group">
+                    <label for="security-q1">Security Question 1</label>
+                    <select id="security-q1" class="form-control" required>
+                        <option value="">-- Select a question --</option>
+                        <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                        <option value="In what city were you born?">In what city were you born?</option>
+                        <option value="What is the name of your first pet?">What is the name of your first pet?</option>
+                        <option value="What is your favorite book?">What is your favorite book?</option>
+                        <option value="What was the name of your first school?">What was the name of your first school?</option>
+                    </select>
+                    <input type="text" id="security-a1" class="form-control" placeholder="Your answer" required style="margin-top: 0.5rem;">
+                </div>
+
+                <div class="form-group">
+                    <label for="security-q2">Security Question 2</label>
+                    <select id="security-q2" class="form-control" required>
+                        <option value="">-- Select a question --</option>
+                        <option value="What is your favorite movie?">What is your favorite movie?</option>
+                        <option value="What is the brand of your first car?">What is the brand of your first car?</option>
+                        <option value="What was your childhood nickname?">What was your childhood nickname?</option>
+                        <option value="What is your favorite sports team?">What is your favorite sports team?</option>
+                        <option value="In what year did you graduate high school?">In what year did you graduate high school?</option>
+                    </select>
+                    <input type="text" id="security-a2" class="form-control" placeholder="Your answer" required style="margin-top: 0.5rem;">
+                </div>
+
+                <div class="form-group">
+                    <label for="security-q3">Security Question 3</label>
+                    <select id="security-q3" class="form-control" required>
+                        <option value="">-- Select a question --</option>
+                        <option value="What is your favorite food?">What is your favorite food?</option>
+                        <option value="What street did you grow up on?">What street did you grow up on?</option>
+                        <option value="What is your favorite color?">What is your favorite color?</option>
+                        <option value="What is your favorite music artist?">What is your favorite music artist?</option>
+                        <option value="What was the name of your best friend in elementary school?">What was the name of your best friend in elementary school?</option>
+                    </select>
+                    <input type="text" id="security-a3" class="form-control" placeholder="Your answer" required style="margin-top: 0.5rem;">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Sign Up</button>
+            </form>
+            
+            <div class="auth-footer">
+                Already have an account? <a href="login.html">Log In</a>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

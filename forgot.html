@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forgot Password - MyStore</title>
+    <link rel="icon" href="assets/logo.png" type="/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        #questions-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 1.5rem;
+        }
+        
+        #questions-container .form-group {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        #questions-container .form-group:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        #questions-container label {
+            color: #000000 !important;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.7rem;
+            font-size: 0.95em;
+        }
+        
+        #questions-container input {
+            color: #000000 !important;
+            background-color: #ffffff;
+            border: 2px solid #ddd;
+            padding: 10px 12px;
+            font-size: 0.95em;
+            transition: border-color 0.3s;
+        }
+        
+        #questions-container input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        
+        #questions-container input::placeholder {
+            color: #999999;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="nav-brand">MyStore</a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="login.html">Login</a>
+                <a href="signup.html">Sign Up</a>
+                <a href="">Help</a>
+                <a href="https://seleman.edgeone.dev" target="_blank"><span style="color: rgb(199, 199, 199);">Sele</span><span style="color: #8076f3;">man</span></a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="auth-wrapper">
+        <div class="card auth-card">
+            <h2>Forgot Password</h2>
+            <p class="subtitle">Enter your email to verify your identity using security questions.</p>
+            
+            <form id="email-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="form-control" required placeholder="seleman@example.com">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%">Continue to Security Questions</button>
+            </form>
+
+            <div style="background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; border-radius: 5px; margin-top: 20px; font-size: 0.9em; color: #0c5aa0;">
+                <p><strong>ℹ️ How it works:</strong></p>
+                <ol style="margin: 10px 0; padding-left: 20px;">
+                    <li>Enter your registered email</li>
+                    <li>Answer your 3 security questions</li>
+                    <li>Receive an OTP code</li>
+                    <li>Verify OTP and reset password</li>
+                </ol>
+            </div>
+
+            <div class="auth-footer">
+                Remember your password? <a href="login.html">Log in here</a>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

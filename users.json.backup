@@ -1,0 +1,25 @@
+[
+  {
+    "id": "08455aa6-b97b-45d1-84bc-9dd0b38cf247",
+    "name": "kenny",
+    "email": "selleman@gmail.com",
+    "phone": "0794276148",
+    "salt": "81616051877beb6d7bba999898c6f572",
+    "hash": "1a115209cd6a2b14f2623f59254ee7407139a6ebcfea17de11ae3d6cceaa69c28826f51d733b55f6b7c820c5efba724de3791d1625135344bda43340ca96d01c",
+    "securityQuestions": [
+      {
+        "question": "In what city were you born?",
+        "answer": "kigali"
+      },
+      {
+        "question": "What is your favorite movie?",
+        "answer": "stranger things"
+      },
+      {
+        "question": "What is your favorite color?",
+        "answer": "black"
+      }
+    ],
+    "themePreference": "dark"
+  }
+]

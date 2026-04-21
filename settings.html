@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyStore - Settings</title>
+    <link rel="icon" href="assets/logo.png" type="/x-icon">
+    <meta name="description" content="MyStore Settings.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="dashboard.html" class="nav-brand">MyStore</a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
+                &#9776;
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="settings.html" class="active">Settings</a>
+                <a href="">Help</a>
+                <a href="index.html">Logout</a>
+                <a href="https://seleman.edgeone.dev" target="_blank"><span style="color: rgb(199, 199, 199);">Sele</span><span style="color: #8076f3;">man</span></a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="dashboard-header">
+            <h1>Settings</h1>
+        </div>
+        
+        <section class="card settings-section">
+            <div class="settings-group">
+                <div>
+                    <h3>Dark Mode</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Toggle between light and dark themes.</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            
+            <div class="settings-group" style="border-bottom: none;">
+                <div>
+                    <h3>Account Info</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Update your email or password.</p>
+                </div>
+                <button class="btn btn-secondary">Edit Profile</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

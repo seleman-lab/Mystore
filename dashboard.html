@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyStore - Dashboard</title>
+    <link rel="icon" href="assets/logo.png" type="/x-icon">
+    <meta name="description" content="Manage your media in the MyStore dashboard.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="dashboard.html" class="nav-brand">MyStore</a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
+                &#9776;
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="dashboard.html" class="active">Dashboard</a>
+                <a href="settings.html">Settings</a>
+                <a href="">Help</a>
+                <a href="index.html">Logout</a>
+                <a href="https://seleman.edgeone.dev" target="_blank"><span style="color: rgb(199, 199, 199);">Sele</span><span style="color: #8076f3;">man</span></a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="dashboard-header">
+            <h1>My Media</h1>
+            <input type="file" id="file-input" accept="image/*,video/*" style="display: none;">
+            <button id="upload-btn" class="btn btn-primary">
+                + Upload New
+            </button>
+        </div>
+        
+        <!-- Storage Stats Section -->
+        <div class="storage-stats-container">
+            <div class="storage-card">
+                <h3>Storage Usage</h3>
+                <div class="storage-bar-wrapper">
+                    <div class="storage-bar">
+                        <div class="storage-used" id="storage-used" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="storage-info">
+                    <div class="storage-text">
+                        <span id="storage-used-text">0 MB</span> / <span id="storage-limit-text">500 MB</span> used
+                    </div>
+                    <div class="storage-remaining">
+                        <span id="storage-remaining-text">500 MB</span> remaining
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="media-grid" id="media-grid">
+            <div class="media-item">
+                <img src="assets/image1.png" alt="Mountain Landscape">
+                <div class="media-overlay">Nature Landscape</div>
+            </div>
+            <div class="media-item">
+                <img src="assets/image2.png" alt="City Night">
+                <div class="media-overlay">City Night View</div>
+            </div>
+            <div class="media-item">
+                <img src="assets/logo.png" alt="City Night">
+                <div class="media-overlay">City Night View</div>
+            </div>
+            <!-- More items could be generated here dynamically -->
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

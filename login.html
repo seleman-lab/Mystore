@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyStore - Log In</title>
+    <link rel="icon" href="assets/logo.png" type="/x-icon">
+    <meta name="description" content="Log in to your MyStore account.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="nav-brand">MyStore</a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
+                &#9776;
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="login.html" class="active">Login</a>
+                <a href="">Help</a>
+                <a href="signup.html" class="btn btn-primary" style="color: white;">Sign Up</a>
+                <a href="https://seleman.edgeone.dev" target="_blank"><span style="color: rgb(199, 199, 199);">Sele</span><span style="color: #8076f3;">man</span></a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="auth-wrapper">
+        <div class="card auth-card">
+            <h2>Welcome Back</h2>
+            <p class="subtitle">Log in to your account.</p>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="form-control" placeholder="seleman@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password" style="display: flex; justify-content: space-between;">
+                        Password
+                        <a href="forgot.html" style="font-size: 0.85rem; font-weight: normal;">Forgot password?</a>
+                    </label>
+                    <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Log In</button>
+            </form>
+            
+            <div class="auth-footer">
+                Don't have an account? <a href="signup.html">Sign Up</a>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
