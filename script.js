@@ -1,8 +1,20 @@
 
+// Get API Base URL - auto-detect environment
+const getApiUrl = () => {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3000';
+  } else if (window.location.hostname.includes('github.io')) {
+    return 'https://mystore-1-tp7b.onrender.com';
+  }
+  return 'https://mystore-1-tp7b.onrender.com'; // Default to Render
+};
+
+const API_BASE_URL = getApiUrl();
+
 // Redirect users to the proper Node.js server if they accidentally double-clicked the HTML file
 if (window.location.protocol === 'file:') {
   const filename = window.location.pathname.split('/').pop() || 'index.html';
-  window.location.href = 'http://localhost:3000/' + filename;
+  window.location.href = API_BASE_URL + '/' + filename;
 } 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,7 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. Fetch authenticated user's settings from the backend
   const loadSettings = async () => {
     try {
-      const response = await fetch('/settings');
+      const response = await fetch(`${API_BASE_URL}/settings`, {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         applyTheme(data.theme);
@@ -48,9 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
       applyTheme(newTheme);
 
       try {
-        await fetch('/settings', {
+        await fetch(`${API_BASE_URL}/settings`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ theme: newTheme })
         });
       } catch (err) {
@@ -79,7 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!mediaGrid) return; // Only run on dashboard
     
     try {
-      const response = await fetch('/files');
+      const response = await fetch(`${API_BASE_URL}/files`, {
+        credentials: 'include'
+      });
       if (response.ok) {
         const files = await response.json();
         mediaGrid.innerHTML = ''; // Clear existing items
@@ -90,9 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
           
           let mediaElement = '';
           if (file.mimeType && file.mimeType.startsWith('video/')) {
-            mediaElement = `<video src="/uploads/${file.filename}" controls></video>`;
+            mediaElement = `<video src="${API_BASE_URL}/uploads/${file.filename}" controls></video>`;
           } else {
-            mediaElement = `<img src="/uploads/${file.filename}" alt="${file.originalName}">`;
+            mediaElement = `<img src="${API_BASE_URL}/uploads/${file.filename}" alt="${file.originalName}">`;
           }
           
           item.innerHTML = `
@@ -123,7 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!storageUsedBar) return; // Only run on dashboard
     
     try {
-      const response = await fetch('/storage-stats');
+      const response = await fetch(`${API_BASE_URL}/storage-stats`, {
+        credentials: 'include'
+      });
       if (response.ok) {
         const stats = await response.json();
         
@@ -170,7 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         
         try {
-          const response = await fetch(`/download?file=${encodeURIComponent(filename)}`);
+          const response = await fetch(`${API_BASE_URL}/download?file=${encodeURIComponent(filename)}`, {
+            credentials: 'include'
+          });
           
           if (response.ok) {
             // Convert binary response to a Blob
@@ -214,9 +235,10 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         
         try {
-          const response = await fetch('/delete-file', {
+          const response = await fetch(`${API_BASE_URL}/delete-file`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ filename: filename })
           });
           
@@ -245,9 +267,10 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         try {
           // Generate embed link
-          const response = await fetch('/generate-embed-link', {
+          const response = await fetch(`${API_BASE_URL}/generate-embed-link`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ filename: filename })
           });
           
@@ -287,9 +310,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
           // Generate share link
-          const response = await fetch('/generate-share-link', {
+          const response = await fetch(`${API_BASE_URL}/generate-share-link`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ filename: filename })
           });
           
@@ -335,8 +359,9 @@ document.addEventListener('DOMContentLoaded', () => {
       uploadBtn.disabled = true;
 
       try {
-        const response = await fetch('/upload', {
+        const response = await fetch(`${API_BASE_URL}/upload`, {
           method: 'POST',
+          credentials: 'include',
           body: formData // Note: Do NOT set Content-Type header. fetch automatically sets it with the boundary!
         });
 
@@ -408,9 +433,10 @@ document.addEventListener('DOMContentLoaded', () => {
       
       try {
         // Use Fetch API to send data to the backend
-        const response = await fetch('/signup', {
+        const response = await fetch(`${API_BASE_URL}/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ name, email, phone, password, securityQuestions })
         });
         
@@ -439,9 +465,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const password = document.getElementById('password').value;
       
       try {
-        const response = await fetch('/login', {
+        const response = await fetch(`${API_BASE_URL}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ email, password })
         });
         
@@ -475,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       try {
         // Verify email exists in the system
-        const response = await fetch('/get-security-questions', {
+        const response = await fetch(`${API_BASE_URL}/get-security-questions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: userEmail })
@@ -517,7 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
       verifyBtn.disabled = true;
       
       try {
-        const response = await fetch('/verify-otp', {
+        const response = await fetch(`${API_BASE_URL}/verify-otp`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, otp })
@@ -568,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
       resetBtn.disabled = true;
       
       try {
-        const response = await fetch('/reset-password-otp', {
+        const response = await fetch(`${API_BASE_URL}/reset-password-otp`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ resetToken, newPassword: password })
