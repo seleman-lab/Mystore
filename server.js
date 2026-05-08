@@ -3,13 +3,22 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const USERS_FILE = path.join(__dirname, 'users.json');
 const FILES_META = path.join(__dirname, 'files.json');
 const TOKENS_FILE = path.join(__dirname, 'tokens.json');
 const OTP_FILE = path.join(__dirname, 'otp.json');
 const STORAGE_LIMIT = 500 * 1024 * 1024; // 500 MB per user
+
+// Frontend URLs for CORS
+const FRONTEND_URLS = [
+  'https://seleman-lab.github.io',
+  'http://localhost:3000',
+  'http://localhost:5500',
+  'http://localhost:8000',
+  'http://127.0.0.1:3000'
+];
 
 // Ensure necessary directories and files exist
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
@@ -26,14 +35,14 @@ try {
 }
 
 // SMTP Configuration (Replace with real credentials)
-const ADMIN_EMAIL = 'kennyselleman@gmail.com'; // Admin email for OTP verification
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'kennyselleman@gmail.com';
 const createTransporter = () => {
     if (!nodemailer) return null;
     return nodemailer.createTransport({
         service: 'gmail',
         auth: {
-            user: process.env.GMAIL_USER || 'your_email@gmail.com', // Set GMAIL_USER environment variable
-            pass: process.env.GMAIL_PASS || 'your_app_password'     // Set GMAIL_PASS environment variable
+            user: process.env.GMAIL_USER || 'your_email@gmail.com',
+            pass: process.env.GMAIL_PASS || 'your_app_password'
         }
     });
 };
@@ -255,18 +264,26 @@ const mimeTypes = {
 // --- Server Creation ---
 const server = http.createServer(async (req, res) => {
     // 1. Robust URL Normalization
-    // Get the path without query parameters, remove trailing slashes, 
-    // and collapse multiple leading slashes (e.g. //upload -> /upload)
     const urlPath = req.url.split('?')[0];
     const pathName = urlPath.replace(/\/+$/, '').replace(/\/+/g, '/') || '/';
     const method = req.method.toUpperCase();
 
-    // 2. Debug Log (Check your terminal/console when you click the button!)
+    // 2. Debug Log
     console.log(`[${method}] Incoming request to: "${pathName}"`);
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // CORS Headers
+    const origin = req.headers.origin;
+    const allowedOrigins = [...FRONTEND_URLS, 'https://seleman-lab.github.io/Mystore'];
+    
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    
     res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST, GET, PUT');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
 
     if (method === 'OPTIONS') {
         res.writeHead(204);
@@ -301,7 +318,7 @@ const server = http.createServer(async (req, res) => {
             // Sanitize security questions and answers
             const sanitizedQuestions = securityQuestions.map(sq => ({
                 question: escapeHTML(sq.question),
-                answer: escapeHTML(sq.answer.trim().toLowerCase()) // Lowercase for case-insensitive comparison
+                answer: escapeHTML(sq.answer.trim().toLowerCase())
             }));
 
             const users = readJSON(USERS_FILE);
@@ -358,7 +375,7 @@ const server = http.createServer(async (req, res) => {
             const sessionId = crypto.randomUUID();
             sessions[sessionId] = user.email;
             
-            res.setHeader('Set-Cookie', `sessionId=${sessionId}; HttpOnly; Path=/; Max-Age=3600`);
+            res.setHeader('Set-Cookie', `sessionId=${sessionId}; HttpOnly; Path=/; Max-Age=3600; SameSite=None; Secure`);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ 
                 message: "Login successful", 
@@ -486,7 +503,6 @@ const server = http.createServer(async (req, res) => {
                 const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
                 const otpData = readJSON(OTP_FILE);
-                // Remove any existing OTP for this email
                 const filtered = otpData.filter(o => o.email !== email);
                 filtered.push({ email, otp, expires });
                 writeJSON(OTP_FILE, filtered);
@@ -655,7 +671,7 @@ const server = http.createServer(async (req, res) => {
                 tokens.push({ email, token, expires });
                 writeJSON(TOKENS_FILE, tokens);
 
-                const resetLink = `http://${req.headers.host}/reset.html?token=${token}`;
+                const resetLink = `https://${req.headers.host}/reset.html?token=${token}`;
                 console.log(`\n--- PASSWORD RESET LINK FOR ${email} ---\n${resetLink}\n---------------------------------------\n`);
 
                 const transporter = createTransporter();
@@ -778,7 +794,6 @@ const server = http.createServer(async (req, res) => {
                 return res.end(JSON.stringify({ error: "No boundary found in Content-Type" }));
             }
             
-            // Remove quotes from boundary if present
             let boundary = boundaryMatch[1].replace(/^"|"$/g, '');
             const fileObj = await parseMultipartData(req, boundary);
             
@@ -890,12 +905,58 @@ const server = http.createServer(async (req, res) => {
             fileMeta.embedTokenCreated = Date.now();
             writeJSON(FILES_META, filesData);
 
-            const embedUrl = `http://${req.headers.host}/embed/${embedToken}`;
+            const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+            const embedUrl = `${protocol}://${req.headers.host}/embed/${embedToken}`;
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ embedUrl }));
         } catch (error) {
             console.error("Embed link error:", error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Internal Server Error" }));
+        }
+    }
+
+    else if (method === 'POST' && pathName === '/generate-share-link') {
+        try {
+            const email = getSessionEmail(req);
+            if (!email) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
+            }
+
+            const body = await parseBody(req);
+            const { filename } = body;
+
+            if (!filename) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Filename is required" }));
+            }
+
+            const safeFilename = path.basename(filename);
+
+            // Verify file ownership
+            const filesData = readJSON(FILES_META);
+            const fileMeta = filesData.find(f => f.filename === safeFilename && f.userEmail && f.userEmail.toLowerCase() === email.toLowerCase());
+
+            if (!fileMeta) {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "File not found or unauthorized" }));
+            }
+
+            // Generate unique share token
+            const shareToken = crypto.randomBytes(32).toString('hex');
+            fileMeta.shareToken = shareToken;
+            fileMeta.shareTokenCreated = Date.now();
+            writeJSON(FILES_META, filesData);
+
+            const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+            const shareUrl = `${protocol}://${req.headers.host}/share/${shareToken}`;
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ shareUrl }));
+        } catch (error) {
+            console.error("Share link error:", error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
         }
@@ -954,7 +1015,49 @@ const server = http.createServer(async (req, res) => {
         }
     }
 
+    else if (method === 'GET' && pathName.startsWith('/share/')) {
+        try {
+            const shareToken = req.url.split('/')[2]?.split('?')[0];
+            
+            const filesData = readJSON(FILES_META);
+            const fileMeta = filesData.find(f => f.shareToken === shareToken);
 
+            if (!fileMeta) {
+                res.writeHead(404, { 'Content-Type': 'text/html' });
+                return res.end('<h1>404 - Share link not found</h1>');
+            }
+
+            const filePath = path.join(UPLOADS_DIR, fileMeta.filename);
+            
+            if (!fs.existsSync(filePath)) {
+                res.writeHead(404, { 'Content-Type': 'text/html' });
+                return res.end('<h1>404 - File not found</h1>');
+            }
+
+            const extname = String(path.extname(filePath)).toLowerCase();
+            const contentType = mimeTypes[extname] || 'application/octet-stream';
+
+            res.writeHead(200, {
+                'Content-Type': contentType,
+                'Content-Disposition': `attachment; filename="${fileMeta.originalName}"`
+            });
+
+            const readStream = fs.createReadStream(filePath);
+            readStream.pipe(res);
+            
+            readStream.on('error', (err) => {
+                console.error("Stream error:", err);
+                if (!res.headersSent) {
+                    res.writeHead(500);
+                    res.end("Stream error");
+                }
+            });
+        } catch (error) {
+            console.error("Share error:", error);
+            res.writeHead(500, { 'Content-Type': 'text/html' });
+            res.end('<h1>500 - Server Error</h1>');
+        }
+    }
 
     else if (method === 'GET' && pathName === '/files') {
         try {
@@ -975,9 +1078,6 @@ const server = http.createServer(async (req, res) => {
         }
     }
 
-
-    
-    // NEW ENDPOINT: Secure File Download
     else if (method === 'GET' && pathName.startsWith('/download')) {
         try {
             // 1. Authenticate user
@@ -1156,5 +1256,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`Server running securely at http://localhost:${PORT}/`);
+    console.log(`Server running at http://localhost:${PORT}/`);
+    console.log(`Backend URL: https://mystore-1-tp7b.onrender.com`);
 });
