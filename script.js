@@ -523,6 +523,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 3.2. ANSWER SECURITY QUESTIONS FORM
+  // This form verifies security questions and sends OTP to admin email
+  const answerQuestionsForm = document.getElementById('answer-questions-form');
+  const submitAnswersBtn = document.getElementById('submit-answers-btn');
+  
+  if (answerQuestionsForm && submitAnswersBtn) {
+    answerQuestionsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = sessionStorage.getItem('resetEmail');
+      if (!email) {
+        return alert("Session expired. Please start over.");
+      }
+      
+      // Get answers from form
+      const answers = [
+        document.getElementById('answer-1').value.trim(),
+        document.getElementById('answer-2').value.trim(),
+        document.getElementById('answer-3').value.trim()
+      ];
+      
+      if (answers.some(a => !a)) {
+        return alert("Please answer all security questions!");
+      }
+      
+      const originalText = submitAnswersBtn.innerText;
+      submitAnswersBtn.innerText = 'Verifying...';
+      submitAnswersBtn.disabled = true;
+      
+      try {
+        // Verify security questions with backend
+        const response = await fetch(`${API_BASE_URL}/verify-security-questions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, answers })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          alert("✅ Security answers verified!\n\nAn OTP has been sent to the admin email.\nYou will receive it shortly.\n\nPlease wait for the admin to send you the OTP code.");
+          // Redirect to OTP verification page
+          window.location.href = 'verify-otp.html';
+        } else {
+          alert(`❌ ${data.error || 'Incorrect answers'}`);
+        }
+      } catch (error) {
+        console.error("Security questions verification error:", error);
+        alert("A network error occurred. Check the console for details.");
+      } finally {
+        submitAnswersBtn.innerText = originalText;
+        submitAnswersBtn.disabled = false;
+      }
+    });
+  }
+
   // 3.5. Verify OTP Form
   const verifyOTPForm = document.getElementById('verify-otp-form');
   const verifyBtn = document.getElementById('verify-btn');
