@@ -35,7 +35,6 @@ try {
 }
 
 // SMTP Configuration (Replace with real credentials)
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'kennyselleman@gmail.com';
 const createTransporter = () => {
     if (!nodemailer) return null;
     return nodemailer.createTransport({
@@ -86,32 +85,31 @@ const generateOTP = () => {
     return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
 };
 
-const sendOTPToAdmin = (userEmail, otp) => {
+// FIXED: Send OTP to USER's email (not admin)
+const sendOTPToUserEmail = (userEmail, otp) => {
     const transporter = createTransporter();
     if (transporter) {
         const mailOptions = {
             from: process.env.GMAIL_USER || 'your_email@gmail.com',
-            to: ADMIN_EMAIL,
-            subject: 'MyStore - Password Reset OTP Request',
+            to: userEmail,
+            subject: 'MyStore - Password Reset OTP Code',
             html: `
                 <h2>Password Reset Request</h2>
-                <p><strong>User Email:</strong> ${userEmail}</p>
-                <p><strong>OTP Code (valid for 10 minutes):</strong></p>
-                <h1 style="color: #007bff; letter-spacing: 5px; font-size: 36px;">${otp}</h1>
-                <p><strong>Instructions:</strong></p>
-                <ul>
-                    <li>User will contact you with their email: ${userEmail}</li>
-                    <li>Send them this OTP code: <strong>${otp}</strong></li>
-                    <li>They will enter the OTP on the verification page</li>
-                </ul>
-                <p style="color: #666; font-size: 12px;">This OTP will expire in 10 minutes.</p>
+                <p>Your password reset OTP code is:</p>
+                <h1 style="color: #007bff; letter-spacing: 5px; font-size: 48px; font-weight: bold; margin: 20px 0;">${otp}</h1>
+                <p style="font-size: 16px;"><strong>⏱️ This code expires in 10 minutes</strong></p>
+                <hr>
+                <p style="color: #666; font-size: 14px;">
+                    If you did not request a password reset, please ignore this email.<br>
+                    Do not share this code with anyone.
+                </p>
             `
         };
         transporter.sendMail(mailOptions, (error, info) => {
             if (error) {
-                console.error("Failed to send OTP to admin:", error.message);
+                console.error("Failed to send OTP to user email:", error.message);
             } else {
-                console.log("OTP sent to admin:", info.response);
+                console.log("OTP sent to user email:", userEmail, "Response:", info.response);
             }
         });
     }
@@ -422,7 +420,7 @@ const server = http.createServer(async (req, res) => {
                 return res.end(JSON.stringify({ error: "Incorrect security answers" }));
             }
 
-            // Answers verified - generate OTP
+            // Answers verified - generate OTP and send to USER's EMAIL
             const otp = generateOTP();
             const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
@@ -431,21 +429,22 @@ const server = http.createServer(async (req, res) => {
             filtered.push({ email, otp, expires });
             writeJSON(OTP_FILE, filtered);
 
-            console.log(`\n--- PASSWORD RESET OTP (via Security Questions) FOR ${email} ---\nOTP: ${otp}\n--- SEND TO USER ---\n------------------------------------------\n`);
-            sendOTPToAdmin(email, otp);
+            console.log(`\n--- PASSWORD RESET OTP FOR ${email} ---\nOTP: ${otp}\n--- SENDING TO USER EMAIL ---\n------------------------------------------\n`);
+            // FIXED: Send OTP to USER's email (not admin)
+            sendOTPToUserEmail(email, otp);
 
             // For testing: include the OTP in the response if environment variables are not set
             if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ 
-                    message: "Security questions verified! Your OTP has been sent.",
+                    message: "✅ Security questions verified! Check your email for the OTP code.",
                     testOTP: otp,
-                    testNote: "TEST MODE - OTP for user: " + otp
+                    testNote: "TEST MODE - OTP code: " + otp
                 }));
             }
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: "Security questions verified! Check your email for the OTP code." }));
+            res.end(JSON.stringify({ message: "✅ Security questions verified! Check your email for the OTP code." }));
         } catch (error) {
             console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -481,55 +480,6 @@ const server = http.createServer(async (req, res) => {
             console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
-        }
-    }
-
-    else if (method === 'POST' && pathName === '/request-otp') {
-        try {
-            const body = await parseBody(req);
-            let { email } = body;
-            
-            if (!email) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Email is required" }));
-            }
-            email = email.trim().toLowerCase();
-
-            const users = readJSON(USERS_FILE);
-            const userExists = users.some(u => u.email === email);
-
-            if (userExists) {
-                const otp = generateOTP();
-                const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-                const otpData = readJSON(OTP_FILE);
-                const filtered = otpData.filter(o => o.email !== email);
-                filtered.push({ email, otp, expires });
-                writeJSON(OTP_FILE, filtered);
-
-                console.log(`\n--- PASSWORD RESET OTP REQUEST FOR ${email} ---\nOTP: ${otp}\n--- ADMIN WILL SEND THIS TO USER ---\n---------------------------------------\n`);
-                sendOTPToAdmin(email, otp);
-
-                // For testing: include the OTP in the response if environment variables are not set
-                if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    return res.end(JSON.stringify({ 
-                        message: "Your password reset request has been received. The admin will send you an OTP code shortly.",
-                        testOTP: otp,
-                        testNote: "TEST MODE - Admin OTP (share with user): " + otp
-                    }));
-                }
-            }
-
-            // Always return success even if user doesn't exist (prevent email enumeration)
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: "Your password reset request has been received. The admin will send you an OTP code to your registered email or contact method." }));
-        } catch (error) {
-            console.error(error);
-            if (!res.headersSent) {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: "Internal Server Error" }));
-            }
         }
     }
 
@@ -640,132 +590,7 @@ const server = http.createServer(async (req, res) => {
             writeJSON(OTP_FILE, filtered);
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: "Password has been successfully reset" }));
-            
-        } catch (error) {
-            console.error(error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: "Internal Server Error" }));
-        }
-    }
-
-    else if (method === 'POST' && pathName === '/forgot-password') {
-        try {
-            const body = await parseBody(req);
-            let { email } = body;
-            
-            if (!email) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Email is required" }));
-            }
-            email = email.trim().toLowerCase();
-
-            const users = readJSON(USERS_FILE);
-            const userExists = users.some(u => u.email === email);
-
-            if (userExists) {
-                const token = crypto.randomBytes(32).toString('hex');
-                const expires = Date.now() + 15 * 60 * 1000; // 15 minutes
-
-                const tokens = readJSON(TOKENS_FILE);
-                tokens.push({ email, token, expires });
-                writeJSON(TOKENS_FILE, tokens);
-
-                const resetLink = `https://${req.headers.host}/reset.html?token=${token}`;
-                console.log(`\n--- PASSWORD RESET LINK FOR ${email} ---\n${resetLink}\n---------------------------------------\n`);
-
-                const transporter = createTransporter();
-                console.log(`Email transporter created: ${transporter ? 'YES' : 'NO'}`);
-                console.log(`GMAIL_USER: ${process.env.GMAIL_USER ? 'SET' : 'NOT SET'}`);
-                console.log(`GMAIL_PASS: ${process.env.GMAIL_PASS ? 'SET' : 'NOT SET'}`);
-                
-                if (transporter) {
-                    const mailOptions = {
-                        from: process.env.GMAIL_USER || 'your_email@gmail.com',
-                        to: email,
-                        subject: 'Password Reset - MyStore',
-                        text: `You requested a password reset. Click the link below to securely reset your password:\n\n${resetLink}\n\nThis link expires in 15 minutes.\nIf you did not request this, please ignore this email.`
-                    };
-                    console.log(`Attempting to send email to: ${email}`);
-                    transporter.sendMail(mailOptions, (error, info) => {
-                        if (error) {
-                            console.error("Failed to send email via nodemailer:", error.message);
-                        } else {
-                            console.log("Email sent successfully:", info.response);
-                        }
-                    });
-                } else {
-                    console.log("No transporter available - email not sent");
-                }
-
-                // For testing: include the reset link in the response if environment variables are not set
-                if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    return res.end(JSON.stringify({ 
-                        message: "If an account with that email exists, a password reset link has been sent.",
-                        testLink: resetLink,
-                        note: "TEST MODE: Copy this link since email credentials are not configured"
-                    }));
-                }
-            }
-
-            // Always return success even if user doesn't exist (prevent email enumeration)
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: "If an account with that email exists, a password reset link has been sent." }));
-        } catch (error) {
-            console.error(error);
-            if (!res.headersSent) {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: "Internal Server Error" }));
-            }
-        }
-    }
-
-    else if (method === 'POST' && pathName === '/reset-password') {
-        try {
-            const body = await parseBody(req);
-            const { token, newPassword } = body;
-
-            if (!token || !newPassword || newPassword.length < 8) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Invalid token or password does not meet requirements" }));
-            }
-
-            const tokens = readJSON(TOKENS_FILE);
-            const tokenIndex = tokens.findIndex(t => t.token === token);
-
-            if (tokenIndex === -1) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Invalid or expired reset token" }));
-            }
-
-            const tokenData = tokens[tokenIndex];
-
-            if (Date.now() > tokenData.expires) {
-                // Clean up expired token
-                tokens.splice(tokenIndex, 1);
-                writeJSON(TOKENS_FILE, tokens);
-                
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Reset token has expired" }));
-            }
-
-            const users = readJSON(USERS_FILE);
-            const userIndex = users.findIndex(u => u.email === tokenData.email);
-
-            if (userIndex !== -1) {
-                const { salt, hash } = hashPassword(newPassword);
-                users[userIndex].salt = salt;
-                users[userIndex].hash = hash;
-                writeJSON(USERS_FILE, users);
-            }
-
-            // Invalidate token after use
-            tokens.splice(tokenIndex, 1);
-            writeJSON(TOKENS_FILE, tokens);
-
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: "Password has been successfully reset" }));
+            res.end(JSON.stringify({ message: "✅ Password has been successfully reset! You can now log in." }));
             
         } catch (error) {
             console.error(error);
