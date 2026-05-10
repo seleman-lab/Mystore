@@ -218,12 +218,12 @@
                 ℹ️ The OTP code is valid for 10 minutes. Check your registered email.
             </div>
 
-            <form id="otp-verification-form">
+            <form id="verify-otp-form">
                 <div class="otp-input-group">
-                    <label for="otp-code">Enter OTP Code</label>
+                    <label for="otp-input">Enter OTP Code</label>
                     <input 
                         type="text" 
-                        id="otp-code" 
+                        id="otp-input" 
                         class="form-control" 
                         required 
                         maxlength="6"
@@ -248,94 +248,15 @@
 
     <script src="script.js"></script>
     <script>
-        // OTP Verification Page Logic
-        document.addEventListener('DOMContentLoaded', async () => {
-            const otpForm = document.getElementById('otp-verification-form');
-            const verifyBtn = document.getElementById('verify-btn');
-            const backBtn = document.getElementById('back-btn');
-            const otpInput = document.getElementById('otp-code');
-            const errorMsg = document.getElementById('error-message');
-            const successMsg = document.getElementById('success-message');
+        // Back button
+        document.getElementById('back-btn').addEventListener('click', () => {
+            window.location.href = 'answer-questions.html';
+        });
 
-            // Get email from URL parameter or sessionStorage
-            const urlParams = new URLSearchParams(window.location.search);
-            let userEmail = urlParams.get('email') || sessionStorage.getItem('resetEmail');
-
-            if (!userEmail) {
-                errorMsg.textContent = 'No email provided. Please start from the password recovery page.';
-                errorMsg.style.display = 'block';
-                verifyBtn.disabled = true;
-                return;
-            }
-
-            // Auto-focus on OTP input
-            otpInput.focus();
-
-            // Form submission
-            otpForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                errorMsg.style.display = 'none';
-                successMsg.style.display = 'none';
-
-                const otp = otpInput.value.trim();
-
-                if (!otp || otp.length !== 6) {
-                    errorMsg.textContent = 'Please enter a valid 6-digit OTP code';
-                    errorMsg.style.display = 'block';
-                    return;
-                }
-
-                // Show loading state
-                verifyBtn.disabled = true;
-                const originalText = verifyBtn.innerText;
-                verifyBtn.innerText = 'Verifying...';
-
-                try {
-                    const response = await fetch('/verify-otp', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: userEmail, otp })
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        // Store the resetToken in sessionStorage
-                        sessionStorage.setItem('resetToken', data.resetToken);
-                        
-                        successMsg.innerHTML = '<strong>✓ OTP Verified!</strong> Redirecting to password reset page...';
-                        successMsg.style.display = 'block';
-
-                        // Redirect after 2 seconds
-                        setTimeout(() => {
-                            window.location.href = 'reset.html';
-                        }, 2000);
-                    } else {
-                        errorMsg.textContent = data.error || 'Failed to verify OTP';
-                        errorMsg.style.display = 'block';
-                    }
-                } catch (error) {
-                    console.error("Error verifying OTP:", error);
-                    errorMsg.textContent = 'A network error occurred. Please try again.';
-                    errorMsg.style.display = 'block';
-                } finally {
-                    verifyBtn.disabled = false;
-                    verifyBtn.innerText = originalText;
-                }
-            });
-
-            // Back button
-            backBtn.addEventListener('click', () => {
-                window.location.href = `answer-questions.html?email=${encodeURIComponent(userEmail)}`;
-            });
-
-            // Format input to only allow numbers
-            otpInput.addEventListener('input', (e) => {
-                e.target.value = e.target.value.replace(/[^0-9]/g, '');
-                if (e.target.value.length === 6) {
-                    e.target.blur();
-                }
-            });
+        // Format input to only allow numbers
+        const otpInput = document.getElementById('otp-input');
+        otpInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
         });
 
         // Resend OTP function
@@ -353,7 +274,6 @@
             resendLink.style.opacity = '0.5';
             resendLink.innerText = 'Sending...';
 
-            // Disable for 30 seconds
             let countdown = 30;
             const timer = setInterval(() => {
                 countdown--;
