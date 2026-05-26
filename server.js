@@ -34,16 +34,44 @@ try {
     console.warn("Notice: nodemailer is not installed. Emails will only be logged to the console.");
 }
 
-// SMTP Configuration (Replace with real credentials)
-const createTransporter = () => {
+// SMTP Configuration
+let _transporter = null;
+
+const getTransporter = async () => {
     if (!nodemailer) return null;
-    return nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.GMAIL_USER || 'your_email@gmail.com',
-            pass: process.env.GMAIL_PASS || 'your_app_password'
-        }
-    });
+    if (_transporter) return _transporter;
+
+    // Use real Gmail credentials if provided
+    if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+        _transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.GMAIL_USER,
+                pass: process.env.GMAIL_PASS
+            }
+        });
+        console.log('📧 Using Gmail SMTP');
+        return _transporter;
+    }
+
+    // Development fallback: Ethereal fake SMTP (captures emails for preview)
+    try {
+        const testAccount = await nodemailer.createTestAccount();
+        _transporter = nodemailer.createTransport({
+            host: 'smtp.ethereal.email',
+            port: 587,
+            secure: false,
+            auth: { user: testAccount.user, pass: testAccount.pass }
+        });
+        console.log('📧 Using Ethereal test email service');
+        console.log('   Preview at: https://ethereal.email/login');
+        console.log('   Username:', testAccount.user);
+        console.log('   Password:', testAccount.pass);
+        return _transporter;
+    } catch (err) {
+        console.error('Failed to create test email account:', err.message);
+        return null;
+    }
 };
 
 const sessions = {};
@@ -85,12 +113,16 @@ const generateOTP = () => {
     return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
 };
 
-// FIXED: Send OTP to USER's email (not admin)
-const sendOTPToUserEmail = (userEmail, otp) => {
-    const transporter = createTransporter();
-    if (transporter) {
-        const mailOptions = {
-            from: process.env.GMAIL_USER || 'your_email@gmail.com',
+// Send OTP to user's email
+const sendOTPToUserEmail = async (userEmail, otp) => {
+    const transporter = await getTransporter();
+    if (!transporter) {
+        console.log(`\n--- OTP FOR ${userEmail} ---\n${otp}\n--- (No email transporter) ---\n`);
+        return;
+    }
+    try {
+        const info = await transporter.sendMail({
+            from: process.env.GMAIL_USER || '"MyStore" <noreply@mystore.dev>',
             to: userEmail,
             subject: 'MyStore - Password Reset OTP Code',
             html: `
@@ -104,14 +136,14 @@ const sendOTPToUserEmail = (userEmail, otp) => {
                     Do not share this code with anyone.
                 </p>
             `
-        };
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error("Failed to send OTP to user email:", error.message);
-            } else {
-                console.log("OTP sent to user email:", userEmail, "Response:", info.response);
-            }
         });
+        console.log(`✅ OTP sent successfully to ${userEmail}`);
+        if (info.messageId && nodemailer.getTestMessageUrl) {
+            const previewUrl = nodemailer.getTestMessageUrl(info);
+            if (previewUrl) console.log('   📬 Preview:', previewUrl);
+        }
+    } catch (error) {
+        console.error("❌ Failed to send OTP email:", error.message);
     }
 };
 
@@ -430,18 +462,7 @@ const server = http.createServer(async (req, res) => {
             writeJSON(OTP_FILE, filtered);
 
             console.log(`\n--- PASSWORD RESET OTP FOR ${email} ---\nOTP: ${otp}\n--- SENDING TO USER EMAIL ---\n------------------------------------------\n`);
-            // FIXED: Send OTP to USER's email (not admin)
             sendOTPToUserEmail(email, otp);
-
-            // For testing: include the OTP in the response if environment variables are not set
-            if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ 
-                    message: "✅ Security questions verified! Check your email for the OTP code.",
-                    testOTP: otp,
-                    testNote: "TEST MODE - OTP code: " + otp
-                }));
-            }
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ message: "✅ Security questions verified! Check your email for the OTP code." }));
@@ -533,6 +554,45 @@ const server = http.createServer(async (req, res) => {
                 message: "OTP verified successfully",
                 resetToken: resetToken
             }));
+        } catch (error) {
+            console.error(error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Internal Server Error" }));
+        }
+    }
+
+    else if (method === 'POST' && pathName === '/resend-otp') {
+        try {
+            const body = await parseBody(req);
+            let { email } = body;
+
+            if (!email) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Email is required" }));
+            }
+            email = email.trim().toLowerCase();
+
+            const users = readJSON(USERS_FILE);
+            const user = users.find(u => u.email === email);
+
+            if (!user) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "User not found" }));
+            }
+
+            const otp = generateOTP();
+            const expires = Date.now() + 10 * 60 * 1000;
+
+            const otpData = readJSON(OTP_FILE);
+            const filtered = otpData.filter(o => o.email !== email);
+            filtered.push({ email, otp, expires });
+            writeJSON(OTP_FILE, filtered);
+
+            console.log(`\n--- RESEND OTP FOR ${email} ---\nOTP: ${otp}\n---\n`);
+            sendOTPToUserEmail(email, otp);
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: "OTP resent successfully! Check your email." }));
         } catch (error) {
             console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -634,7 +694,9 @@ const server = http.createServer(async (req, res) => {
                 originalName: escapeHTML(fileObj.filename),
                 userEmail: email,
                 mimeType: escapeHTML(fileObj.contentType),
-                uploadDate: new Date()
+                uploadDate: new Date(),
+                embedToken: crypto.randomBytes(32).toString('hex'),
+                embedTokenCreated: Date.now()
             };
             
             filesData.push(newFileMeta);
@@ -984,6 +1046,120 @@ const server = http.createServer(async (req, res) => {
             
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ theme: user?.themePreference || 'light' }));
+        } catch (error) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Internal Server Error" }));
+        }
+    }
+
+    else if (method === 'POST' && pathName === '/update-profile') {
+        try {
+            const email = getSessionEmail(req);
+            if (!email) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
+            }
+
+            const body = await parseBody(req);
+            let { name, phone } = body;
+
+            const users = readJSON(USERS_FILE);
+            const userIndex = users.findIndex(u => u.email === email);
+
+            if (userIndex === -1) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "User not found" }));
+            }
+
+            if (name) users[userIndex].name = escapeHTML(name);
+            if (phone) users[userIndex].phone = escapeHTML(phone);
+
+            writeJSON(USERS_FILE, users);
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                message: "Profile updated successfully",
+                user: { name: users[userIndex].name, email: users[userIndex].email, phone: users[userIndex].phone }
+            }));
+        } catch (error) {
+            console.error("Update profile error:", error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Internal Server Error" }));
+        }
+    }
+
+    else if (method === 'POST' && pathName === '/change-password') {
+        try {
+            const email = getSessionEmail(req);
+            if (!email) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
+            }
+
+            const body = await parseBody(req);
+            const { currentPassword, newPassword } = body;
+
+            if (!currentPassword || !newPassword) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Current password and new password are required" }));
+            }
+
+            if (newPassword.length < 8) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "New password must be at least 8 characters" }));
+            }
+
+            const users = readJSON(USERS_FILE);
+            const userIndex = users.findIndex(u => u.email === email);
+
+            if (userIndex === -1) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "User not found" }));
+            }
+
+            const user = users[userIndex];
+            if (!verifyPassword(currentPassword, user.hash, user.salt)) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Current password is incorrect" }));
+            }
+
+            const { salt, hash } = hashPassword(newPassword);
+            users[userIndex].salt = salt;
+            users[userIndex].hash = hash;
+            writeJSON(USERS_FILE, users);
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: "Password changed successfully" }));
+        } catch (error) {
+            console.error("Change password error:", error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Internal Server Error" }));
+        }
+    }
+
+    else if (method === 'GET' && pathName === '/get-profile') {
+        try {
+            const email = getSessionEmail(req);
+            if (!email) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
+            }
+
+            const users = readJSON(USERS_FILE);
+            const user = users.find(u => u.email === email);
+
+            if (!user) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "User not found" }));
+            }
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                theme: user.themePreference || 'light'
+            }));
         } catch (error) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));

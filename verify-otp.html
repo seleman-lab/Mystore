@@ -269,21 +269,42 @@
                 return;
             }
 
+            if (!confirm('Request a new OTP code?')) return;
+
             const resendLink = document.getElementById('resend-link');
             resendLink.style.pointerEvents = 'none';
             resendLink.style.opacity = '0.5';
             resendLink.innerText = 'Sending...';
 
+            fetch(`${API_BASE_URL}/resend-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmail })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                } else {
+                    alert('Failed to resend OTP. Please try again from the beginning.');
+                }
+            })
+            .catch(() => {
+                alert('Network error. Please try again.');
+            });
+
             let countdown = 30;
             const timer = setInterval(() => {
                 countdown--;
-                document.getElementById('timer').innerHTML = ` (${countdown}s)`;
+                const timerEl = document.getElementById('timer');
+                if (timerEl) timerEl.innerHTML = ` (${countdown}s)`;
                 if (countdown === 0) {
                     clearInterval(timer);
                     resendLink.style.pointerEvents = 'auto';
                     resendLink.style.opacity = '1';
                     resendLink.innerText = 'Resend OTP';
-                    document.getElementById('timer').innerHTML = '';
+                    const timerEl = document.getElementById('timer');
+                    if (timerEl) timerEl.innerHTML = '';
                 }
             }, 1000);
         }

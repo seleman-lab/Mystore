@@ -20,6 +20,52 @@
         "answer": "black"
       }
     ],
+    "themePreference": "dark"
+  },
+  {
+    "id": "56edb80e-c5e1-45af-a4cf-37c6fe810272",
+    "name": "Niyifasha Celine",
+    "email": "niyifashaceline4@gmail.com",
+    "phone": "+250787453503",
+    "salt": "ffd9755a2efb6993fa2a1b2aac716823",
+    "hash": "414bfc6384dc132da90011a93ce07a5798a157836ba73accd690abc697f53223b35f8154cd746bf78df6cfd8ebf76135eb9457166bb8619960e9cc9242b21742",
+    "securityQuestions": [
+      {
+        "question": "In what city were you born?",
+        "answer": "kigali"
+      },
+      {
+        "question": "What is your favorite movie?",
+        "answer": "horror"
+      },
+      {
+        "question": "What is your favorite food?",
+        "answer": "ibijumba"
+      }
+    ],
+    "themePreference": "light"
+  },
+  {
+    "id": "00f329ad-8b37-44a6-ac2e-7210c715a3d2",
+    "name": "seleman",
+    "email": "charmingselleman@gmail.com",
+    "phone": "0794276148",
+    "salt": "a41614c628a15d4c22e81756cf909665",
+    "hash": "522ece3f5aa44ee3e4030859d97bc415e2c9f01097c00973226d40985ab0182476acf0a76106fcb73bf4e1b172de078d336d0a85adcc2936c5a4465536e71aee",
+    "securityQuestions": [
+      {
+        "question": "In what city were you born?",
+        "answer": "kigali"
+      },
+      {
+        "question": "What is your favorite movie?",
+        "answer": "stranger things"
+      },
+      {
+        "question": "What is your favorite food?",
+        "answer": "umuceri"
+      }
+    ],
     "themePreference": "light"
   }
 ]

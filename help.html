@@ -11,6 +11,23 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
+      --bg:       #f4f4f9;
+      --surface:  #ffffff;
+      --card:     #ffffff;
+      --border:   #e2e2ef;
+      --accent:   #4f6ef7;
+      --accent2:  #7c3aed;
+      --glow:     #4f6ef740;
+      --text:     #1a1a2e;
+      --muted:    #8888aa;
+      --white:    #ffffff;
+      --success:  #22d3a2;
+      --warn:     #f97316;
+      --radius:   16px;
+      --transition: .28s cubic-bezier(.4,0,.2,1);
+    }
+
+    body.dark-theme {
       --bg:       #09090f;
       --surface:  #111120;
       --card:     #14142a;
@@ -23,8 +40,6 @@
       --white:    #ffffff;
       --success:  #22d3a2;
       --warn:     #f97316;
-      --radius:   16px;
-      --transition: .28s cubic-bezier(.4,0,.2,1);
     }
 
     html { scroll-behavior: smooth; }
@@ -43,9 +58,9 @@
       position: fixed;
       inset: 0;
       background:
-        radial-gradient(ellipse 900px 500px at 10% 0%, #1a1a4a55 0%, transparent 70%),
-        radial-gradient(ellipse 600px 400px at 90% 80%, #2a1060 0%, transparent 65%),
-        radial-gradient(ellipse 400px 400px at 60% 40%, #0d1a4a30 0%, transparent 70%);
+        radial-gradient(ellipse 900px 500px at 10% 0%, var(--accent)11 0%, transparent 70%),
+        radial-gradient(ellipse 600px 400px at 90% 80%, var(--accent2)22 0%, transparent 65%),
+        radial-gradient(ellipse 400px 400px at 60% 40%, var(--accent)08 0%, transparent 70%);
       pointer-events: none;
       z-index: 0;
     }
@@ -62,7 +77,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: #1a1a3a;
+      background: var(--surface);
       border: 1px solid var(--border);
       color: var(--accent);
       font-size: .75rem;
@@ -175,12 +190,12 @@
     .card .value {
       font-size: 1.15rem;
       font-weight: 500;
-      color: var(--white);
+      color: var(--text);
       word-break: break-all;
     }
 
     .card a.value {
-      color: var(--white);
+      color: var(--text);
       text-decoration: none;
       transition: color var(--transition);
     }
@@ -238,12 +253,12 @@
     .social-icon.fb { background: #1877f2; }
 
     .social-meta { display: flex; flex-direction: column; gap: 2px; }
-    .social-meta strong { color: var(--white); }
+    .social-meta strong { color: var(--text); }
     .social-meta span { font-size: .8rem; color: var(--muted); }
 
     /* ── ABOUT CARD ── */
     .about-card {
-      background: linear-gradient(135deg, #11112a, #0e0e22);
+      background: linear-gradient(135deg, var(--surface), var(--card));
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 36px 36px;
@@ -263,7 +278,7 @@
     .about-card p {
       font-size: 1.05rem;
       line-height: 1.8;
-      color: #b0b0d8;
+      color: var(--muted);
       font-weight: 300;
       max-width: 680px;
     }
@@ -290,9 +305,9 @@
     .toast {
       position: fixed;
       bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
-      background: #1e1e3a;
+      background: var(--card);
       border: 1px solid var(--accent);
-      color: var(--white);
+      color: var(--text);
       padding: 10px 22px;
       border-radius: 100px;
       font-size: .85rem;
@@ -432,6 +447,7 @@
 <!-- COPY TOAST -->
 <div class="toast" id="toast">Copied to clipboard!</div>
 
+<script src="script.js"></script>
 <script>
   // Copy-on-click for contact cards
   document.querySelectorAll('.card[data-copy]').forEach(card => {
