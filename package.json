@@ -2,7 +2,7 @@
   "name": "mystore",
   "version": "1.0.0",
   "description": "",
-  "main": "script.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
@@ -12,6 +12,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "nodemailer": "^8.0.5"
+    "cloudinary": "^2.10.0",
+    "resend": "^4.8.0"
   }
 }

@@ -7,17 +7,36 @@
     "uploadDate": "2026-04-20T19:25:07.530Z"
   },
   {
-    "filename": "d72bb8ba-8aa7-4aae-a804-dfdd490a4517.mp4",
-    "originalName": "Bruce_Melodie_-_Akinyuma_(Official_Music_Video)(360p).mp4",
+    "filename": "b2a4ed09-1fe9-481a-aef9-f5289b7b658e.jpg",
+    "originalName": "Screenshot_20260526-191949_WhatsApp.jpg",
     "userEmail": "kennyselleman@gmail.com",
-    "mimeType": "video/mp4",
-    "uploadDate": "2026-04-21T12:56:13.229Z"
+    "mimeType": "image/jpeg",
+    "uploadDate": "2026-06-01T15:10:33.038Z",
+    "embedToken": "571f96564aaa7cf7d14a0a6065d1a1e4f946bdbd9515440a6f2654ffde2880d9",
+    "embedTokenCreated": 1780326633038,
+    "cloudinaryUrl": null,
+    "cloudinaryPublicId": null
   },
   {
-    "filename": "e072fbd5-5ffe-4ef9-8bfe-39effabfa9d3.png",
-    "originalName": "Screenshot 2026-03-27 114358.png",
+    "filename": "7d26e148-9a7b-43f2-aa52-1b4fc8cb4680.html",
+    "originalName": "index.html",
     "userEmail": "kennyselleman@gmail.com",
-    "mimeType": "image/png",
-    "uploadDate": "2026-04-21T13:54:10.602Z"
+    "mimeType": "text/html",
+    "uploadDate": "2026-06-01T15:11:13.936Z",
+    "embedToken": "2c91cd2c3ff9ac32ddb82d48de39615b30d64d5c8c68c34f0b5b2dea09ab82c8",
+    "embedTokenCreated": 1780326673937,
+    "cloudinaryUrl": null,
+    "cloudinaryPublicId": null
+  },
+  {
+    "filename": "b536f68a-d92b-497a-b2f3-27e622e5aec7.docx",
+    "originalName": "AIP texts.docx",
+    "userEmail": "kennyselleman@gmail.com",
+    "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "uploadDate": "2026-06-01T15:11:42.057Z",
+    "embedToken": "157efbf548cff2521f76659262933f2691e94210b96af44dfa94e0ca0d4435ec",
+    "embedTokenCreated": 1780326702057,
+    "cloudinaryUrl": null,
+    "cloudinaryPublicId": null
   }
 ]

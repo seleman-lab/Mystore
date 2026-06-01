@@ -276,6 +276,7 @@
     <script src="script.js"></script>
     <script>
         // Answer Questions Page Logic
+        // API_BASE_URL is already defined in script.js
         document.addEventListener('DOMContentLoaded', async () => {
             const answersForm = document.getElementById('answer-questions-form');
             const getOtpBtn = document.getElementById('get-otp-btn');
@@ -302,7 +303,7 @@
 
             try {
                 // Fetch security questions
-                const response = await fetch('/get-security-questions', {
+                const response = await fetch(`${API_BASE_URL}/get-security-questions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: userEmail })
@@ -369,7 +370,7 @@
                 const originalText = getOtpBtn.innerText;
 
                 try {
-                    const response = await fetch('/verify-security-questions', {
+                    const response = await fetch(`${API_BASE_URL}/verify-security-questions`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email: userEmail, answers })
@@ -378,18 +379,8 @@
                     const data = await response.json();
 
                     if (response.ok) {
-                        successMsg.innerHTML = `
-                            <strong>✓ Success!</strong> ${data.message}<br>
-                            <small>Check your email for the OTP code, or use the test OTP: <strong>${data.testOTP || 'N/A'}</strong></small>
-                        `;
+                        successMsg.innerHTML = `<strong>✓ Success!</strong> ${data.message}`;
                         successMsg.style.display = 'block';
-
-                        // Store test OTP if available
-                        if (data.testOTP) {
-                            sessionStorage.setItem('testOTP', data.testOTP);
-                            // Show alert with OTP code
-                            alert(`✓ Answers Verified!\n\nYour OTP Code: ${data.testOTP}\n\nPlease use this code to reset your password.`);
-                        }
 
                         // Redirect after 2 seconds
                         setTimeout(() => {

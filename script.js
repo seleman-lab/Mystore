@@ -235,11 +235,6 @@ const loadSecurityQuestions = async () => {
   }
 };
 
-// Load questions on page load
-if (document.getElementById('questions-container')) {
-  loadSecurityQuestions();
-}
-
 // ============================================
 // 3.2. ANSWER SECURITY QUESTIONS FORM
 // ============================================
@@ -425,6 +420,357 @@ const checkAuthentication = () => {
 
 if (window.location.pathname.includes('dashboard')) {
   checkAuthentication();
+}
+
+// ============================================
+// 6.1. FILE UPLOAD HANDLER
+// ============================================
+const uploadBtn = document.getElementById('upload-btn');
+const fileInput = document.getElementById('file-input');
+
+if (uploadBtn && fileInput) {
+  uploadBtn.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return alert('File is too large. Maximum size is 50 MB.');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    uploadBtn.disabled = true;
+    uploadBtn.innerText = 'Uploading...';
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('File uploaded successfully!');
+        fileInput.value = '';
+        loadFiles();
+        loadStorageStats();
+      } else {
+        alert(`Upload failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Upload failed. Make sure the server is running.');
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.innerText = '+ Upload New';
+    }
+  });
+}
+
+// ============================================
+// 6.2. LOAD FILES (DASHBOARD)
+// ============================================
+const loadFiles = async () => {
+  const mediaGrid = document.getElementById('media-grid');
+  if (!mediaGrid) return;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/files`, {
+      credentials: 'include'
+    });
+
+    if (!response.ok) return;
+
+    const files = await response.json();
+
+    if (files.length === 0) {
+      mediaGrid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
+          <p style="font-size: 3rem; margin-bottom: 1rem;">📁</p>
+          <p>No files yet. Click "Upload New" to get started.</p>
+        </div>`;
+      return;
+    }
+
+    mediaGrid.innerHTML = '';
+    files.forEach(file => {
+      const isVideo = file.mimeType && file.mimeType.startsWith('video/');
+      const ext = file.filename.split('.').pop().toLowerCase();
+      const isImage = ['png', 'jpg', 'jpeg', 'gif'].includes(ext);
+      const hasToken = file.embedToken;
+
+      const item = document.createElement('div');
+      item.className = 'media-item';
+
+      let preview = '';
+      if (isVideo && hasToken) {
+        preview = `<video src="${API_BASE_URL}/embed/${file.embedToken}" muted></video>`;
+      } else if (isImage && hasToken) {
+        preview = `<img src="${API_BASE_URL}/embed/${file.embedToken}" alt="${file.originalName}" loading="lazy">`;
+      } else {
+        const icon = isVideo ? '🎬' : isImage ? '🖼️' : '📄';
+        preview = `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem;color:var(--text-secondary);">${icon}</div>`;
+      }
+
+      item.innerHTML = `
+        ${preview}
+        <div class="media-overlay">
+          <span style="font-weight:600;font-size:0.9rem;">${file.originalName}</span>
+          <div class="media-actions">
+            <button class="download-btn" data-filename="${file.filename}">Download</button>
+            <button class="delete-btn" data-filename="${file.filename}">Delete</button>
+          </div>
+        </div>
+      `;
+
+      mediaGrid.appendChild(item);
+    });
+
+    // Add event listeners for download and delete
+    document.querySelectorAll('.download-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const filename = btn.dataset.filename;
+        window.open(`${API_BASE_URL}/download?file=${encodeURIComponent(filename)}`, '_blank');
+      });
+    });
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this file?')) return;
+        const filename = btn.dataset.filename;
+        try {
+          const res = await fetch(`${API_BASE_URL}/delete-file`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ filename })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            alert('File deleted');
+            loadFiles();
+            loadStorageStats();
+          } else {
+            alert(data.error || 'Delete failed');
+          }
+        } catch (err) {
+          alert('Delete failed');
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Load files error:', error);
+  }
+};
+
+// Load files on dashboard page
+if (document.getElementById('media-grid')) {
+  loadFiles();
+}
+
+// ============================================
+// 6.3. LOAD STORAGE STATS
+// ============================================
+const loadStorageStats = async () => {
+  const storageUsed = document.getElementById('storage-used');
+  const storageUsedText = document.getElementById('storage-used-text');
+  const storageLimitText = document.getElementById('storage-limit-text');
+  const storageRemainingText = document.getElementById('storage-remaining-text');
+  if (!storageUsed) return;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/storage-stats`, {
+      credentials: 'include'
+    });
+    if (!response.ok) return;
+    const stats = await response.json();
+
+    const usedMB = (stats.used / (1024 * 1024)).toFixed(1);
+    const limitMB = (stats.limit / (1024 * 1024)).toFixed(0);
+    const remainingMB = (stats.remaining / (1024 * 1024)).toFixed(1);
+
+    storageUsed.style.width = stats.percentage + '%';
+    if (storageUsedText) storageUsedText.textContent = usedMB + ' MB';
+    if (storageLimitText) storageLimitText.textContent = limitMB + ' MB';
+    if (storageRemainingText) storageRemainingText.textContent = remainingMB + ' MB';
+
+    if (stats.percentage > 90) {
+      storageUsed.style.background = 'linear-gradient(to right, #ef4444, #dc2626)';
+    } else if (stats.percentage > 70) {
+      storageUsed.style.background = 'linear-gradient(to right, #f59e0b, #d97706)';
+    }
+  } catch (error) {
+    console.error('Storage stats error:', error);
+  }
+};
+
+if (document.getElementById('storage-used')) {
+  loadStorageStats();
+}
+
+// ============================================
+// 6.4. THEME LOAD & TOGGLE SYNC
+// ============================================
+// Apply saved theme on every page
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'dark') {
+  document.body.classList.add('dark-theme');
+} else {
+  document.body.classList.remove('dark-theme');
+}
+
+const themeToggle = document.getElementById('theme-toggle');
+if (themeToggle) {
+  themeToggle.checked = savedTheme === 'dark';
+
+  themeToggle.addEventListener('change', async () => {
+    const isDark = themeToggle.checked;
+    const theme = isDark ? 'dark' : 'light';
+
+    document.body.classList.toggle('dark-theme', isDark);
+    localStorage.setItem('theme', theme);
+
+    try {
+      await fetch(`${API_BASE_URL}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ theme })
+      });
+    } catch (error) {
+      console.error('Theme sync error:', error);
+    }
+  });
+}
+
+// ============================================
+// 6.5. SETTINGS - LOAD PROFILE
+// ============================================
+const settingsForm = document.getElementById('settings-form');
+if (settingsForm) {
+  const loadProfile = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/get-profile`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        window.location.href = 'login.html';
+        return;
+      }
+      const data = await response.json();
+
+      const nameInput = document.getElementById('settings-name');
+      const emailInput = document.getElementById('settings-email');
+      const phoneInput = document.getElementById('settings-phone');
+
+      if (nameInput) nameInput.value = data.name || '';
+      if (emailInput) emailInput.value = data.email || '';
+      if (phoneInput) phoneInput.value = data.phone || '';
+    } catch (error) {
+      console.error('Load profile error:', error);
+    }
+  };
+
+  loadProfile();
+
+  settingsForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById('settings-name').value.trim();
+    const phone = document.getElementById('settings-phone').value.trim();
+
+    if (!name) return alert('Name is required');
+
+    const submitBtn = settingsForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerText;
+    submitBtn.innerText = 'Saving...';
+    submitBtn.disabled = true;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/update-profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name, phone })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem('userName', name);
+        alert('Profile updated successfully!');
+      } else {
+        alert(data.error || 'Update failed');
+      }
+    } catch (error) {
+      alert('Failed to update profile');
+    } finally {
+      submitBtn.innerText = originalText;
+      submitBtn.disabled = false;
+    }
+  });
+}
+
+// ============================================
+// 6.6. SETTINGS - CHANGE PASSWORD
+// ============================================
+const passwordForm = document.getElementById('password-form');
+if (passwordForm) {
+  passwordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return alert('All password fields are required');
+    }
+
+    if (newPassword !== confirmPassword) {
+      return alert('New passwords do not match');
+    }
+
+    if (newPassword.length < 8) {
+      return alert('New password must be at least 8 characters');
+    }
+
+    const submitBtn = passwordForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerText;
+    submitBtn.innerText = 'Changing...';
+    submitBtn.disabled = true;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Password changed successfully!');
+        passwordForm.reset();
+      } else {
+        alert(data.error || 'Password change failed');
+      }
+    } catch (error) {
+      alert('Failed to change password');
+    } finally {
+      submitBtn.innerText = originalText;
+      submitBtn.disabled = false;
+    }
+  });
 }
 
 // ============================================
