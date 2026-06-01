@@ -12,7 +12,11 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+<<<<<<< HEAD
     "cloudinary": "^2.10.0",
     "resend": "^4.8.0"
+=======
+    "nodemailer": "^8.0.8"
+>>>>>>> 11bc522639be165638c705d1f402c28a40b49eca
   }
 }

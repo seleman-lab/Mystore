@@ -21,6 +21,7 @@
       }
     ],
     "themePreference": "dark"
+<<<<<<< HEAD
   },
   {
     "id": "56edb80e-c5e1-45af-a4cf-37c6fe810272",
@@ -44,5 +45,7 @@
       }
     ],
     "themePreference": "light"
+=======
+>>>>>>> 11bc522639be165638c705d1f402c28a40b49eca
   }
 ]
