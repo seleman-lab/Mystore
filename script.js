@@ -879,6 +879,21 @@ const initWatch = async () => {
       downloadBtn.style.display = '';
     }
 
+    // Direct download URL
+    const downloadUrlInput = document.getElementById('download-url');
+    const copyDownloadBtn = document.getElementById('copy-download-btn');
+    if (downloadUrlInput && movie.downloadUrl) {
+      downloadUrlInput.value = movie.downloadUrl;
+    }
+    if (copyDownloadBtn && movie.downloadUrl) {
+      copyDownloadBtn.addEventListener('click', async () => {
+        const ok = await copyTextToClipboard(movie.downloadUrl);
+        copyDownloadBtn.classList.toggle('copied', ok);
+        copyDownloadBtn.innerText = ok ? '✅ Copied!' : '❌ Copy failed';
+        setTimeout(() => { copyDownloadBtn.classList.remove('copied'); copyDownloadBtn.innerText = '📋 Copy'; }, 2000);
+      });
+    }
+
     if (embedBtn) {
       embedBtn.addEventListener('click', async () => {
         embedCode.select();

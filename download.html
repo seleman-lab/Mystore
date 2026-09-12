@@ -5,96 +5,205 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>__PAGE_TITLE__</title>
     <style>
+        :root {
+            --bg: #090b11;
+            --surface: rgba(255, 255, 255, 0.045);
+            --border: rgba(255, 255, 255, 0.09);
+            --text: #f4f5f7;
+            --muted: rgba(255, 255, 255, 0.6);
+            --accent: #7c5cff;
+            --accent-2: #49d0ff;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { min-height: 100%; background: #0f1117; }
+        html, body { min-height: 100%; }
         body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: #fff;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-        }
-        main.dl-main { flex: 1; }
-
-        /* Custom design area (owner's HTML) */
-        .design-body { display: __DESIGN_DISPLAY__; }
-
-        /* Access denied / disabled panel */
-        .denied-wrap {
-            display: __DENIED_DISPLAY__;
-            min-height: 100vh;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 32px 20px;
-        }
-        .denied-wrap .card {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 16px;
-            padding: 44px 36px;
-            max-width: 460px;
-        }
-        .denied-wrap .icon { font-size: 52px; }
-        .denied-wrap h2 { margin: 16px 0 8px; font-size: 22px; }
-        .denied-wrap p { color: rgba(255, 255, 255, 0.65); font-size: 15px; line-height: 1.6; }
-        .denied-wrap .pub-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #fff;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px 18px;
-            border-radius: 99px;
-            text-decoration: none;
-            font-size: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* Bottom download bar */
-        .dl-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 16px 24px;
-            background: #161a24;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            position: sticky;
-            bottom: 0;
+        /* ambient background */
+        .bg-glow { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+        .bg-glow::before,
+        .bg-glow::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(110px);
+            opacity: .55;
+        }
+        .bg-glow::before {
+            width: 620px; height: 620px;
+            left: -140px; top: -200px;
+            background: radial-gradient(circle, rgba(124, 92, 255, .5), transparent 70%);
+        }
+        .bg-glow::after {
+            width: 560px; height: 560px;
+            right: -160px; bottom: -120px;
+            background: radial-gradient(circle, rgba(73, 208, 255, .38), transparent 70%);
+        }
+
+        main.dl-main { flex: 1; width: 100%; }
+
+        /* brand header */
+        .brand-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 16px;
+            max-width: 980px; margin: 0 auto; width: 100%;
+            padding: 20px 24px;
+        }
+        .brand-logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; letter-spacing: -.01em; text-decoration: none; color: var(--text); }
+        .brand-logo .dot {
+            width: 30px; height: 30px; border-radius: 9px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            box-shadow: 0 6px 18px -4px rgba(124, 92, 255, .6);
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 15px;
+        }
+        .brand-powered { font-size: 13px; color: var(--muted); text-decoration: none; }
+        .brand-powered b { color: #b9aaff; font-weight: 700; }
+
+        .design-body { display: __DESIGN_DISPLAY__; width: 100%; }
+        .design-inner {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; padding: 24px;
+        }
+
+        /* default fallback hero (used when the owner has no custom design) */
+        .default-hero {
+            display: flex; align-items: center; justify-content: center; gap: 42px;
+            max-width: 880px; margin: 0 auto;
+            padding: 36px 20px 60px;
             flex-wrap: wrap;
         }
-        .dl-bar .dl-info { min-width: 0; }
-        .dl-bar .dl-info strong { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
-        .dl-bar .dl-info span { display: block; font-size: 12px; color: rgba(255, 255, 255, 0.55); margin-top: 2px; }
+        .default-hero .poster {
+            width: 210px; height: 300px; object-fit: cover; border-radius: 18px;
+            border: 1px solid var(--border);
+            box-shadow: 0 24px 48px -16px rgba(0, 0, 0, .65);
+            background: rgba(255, 255, 255, .04);
+        }
+        .default-info { max-width: 470px; min-width: 260px; }
+        .default-hero .pill {
+            display: inline-block; padding: 7px 14px; border-radius: 99px;
+            background: rgba(124, 92, 255, .14); border: 1px solid rgba(124, 92, 255, .28);
+            color: #c4b5ff; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+        .default-hero h1 { font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+        .default-hero .meta { color: var(--muted); margin: 10px 0 14px; font-size: 14px; }
+        .default-hero p { color: var(--muted); line-height: 1.7; font-size: 15px; margin-bottom: 26px; }
+        @media (max-width: 640px) {
+            .default-hero { text-align: center; }
+            .default-info { min-width: 0; }
+        }
+
+        /* access denied / disabled panel */
+        .denied-wrap {
+            display: __DENIED_DISPLAY__;
+            align-items: center; justify-content: center;
+            padding: 48px 20px;
+        }
+        .denied-wrap .card {
+            max-width: 440px; width: 100%;
+            text-align: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 48px 36px;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            box-shadow: 0 30px 60px -24px rgba(0, 0, 0, .6);
+        }
+        .denied-wrap .lock {
+            width: 68px; height: 68px; margin: 0 auto 20px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(124, 92, 255, .25), rgba(73, 208, 255, .18));
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px;
+        }
+        .denied-wrap h2 { font-size: 21px; margin-bottom: 10px; }
+        .denied-wrap p { color: var(--muted); font-size: 14.5px; line-height: 1.65; }
+        .denied-wrap .pub-link {
+            display: inline-flex; align-items: center; gap: 8px;
+            margin-top: 24px; padding: 11px 20px;
+            border-radius: 12px;
+            color: var(--text); text-decoration: none;
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid var(--border);
+            font-size: 13.5px; font-weight: 600;
+            transition: .2s ease;
+        }
+        .denied-wrap .pub-link:hover { background: rgba(255, 255, 255, .11); transform: translateY(-1px); }
+
+        /* download buttons */
         .dl-btn {
             display: __BTN_DISPLAY__;
-            align-items: center;
-            gap: 8px;
-            background: #e50914;
-            color: #fff;
+            align-items: center; gap: 9px;
+            padding: 14px 26px;
+            border-radius: 13px;
+            font-weight: 700; font-size: 15px;
             text-decoration: none;
-            font-weight: 700;
-            font-size: 15px;
-            padding: 12px 24px;
-            border-radius: 10px;
+            color: #fff;
+            background: linear-gradient(135deg, var(--accent) 0%, #ff5bbf 130%);
+            box-shadow: 0 12px 30px -8px rgba(124, 92, 255, .55);
+            transition: transform .18s ease, box-shadow .18s ease;
             white-space: nowrap;
-            transition: background 0.2s ease, transform 0.1s ease;
         }
-        .dl-btn:hover { background: #f6121d; transform: translateY(-1px); }
-        .dl-note { display: __NOTE_DISPLAY__; font-size: 13px; color: rgba(255, 255, 255, 0.6); }
-        @media (max-width: 520px) {
+        .dl-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 36px -8px rgba(124, 92, 255, .7); }
+        .dl-btn:active { transform: translateY(0); }
+
+        /* sticky footer download bar */
+        .dl-bar {
+            position: sticky; bottom: 0;
+            display: flex; align-items: center; gap: 16px;
+            justify-content: space-between; flex-wrap: wrap;
+            padding: 14px 24px;
+            background: rgba(14, 16, 24, .82);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid var(--border);
+        }
+        .dl-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .foot-thumb {
+            width: 46px; height: 60px; object-fit: cover; border-radius: 8px;
+            border: 1px solid var(--border); flex: none; background: rgba(255, 255, 255, .04);
+        }
+        .dl-info .meta { min-width: 0; }
+        .dl-info strong { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52vw; }
+        .dl-info .sub { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+        .dl-note { display: __NOTE_DISPLAY__; font-size: 13px; color: var(--muted); }
+        .dl-bar .dl-btn { padding: 11px 22px; font-size: 14px; flex: none; }
+
+        @media (max-width: 560px) {
+            .brand-head { padding: 16px; }
             .dl-bar { flex-direction: column; align-items: stretch; text-align: center; }
-            .dl-bar .dl-info strong { max-width: none; }
-            .dl-btn { justify-content: center; }
+            .dl-info { justify-content: center; }
+            .dl-info strong { max-width: none; }
+            .dl-bar .dl-btn { justify-content: center; }
         }
     </style>
     <style>__CUSTOM_CSS__</style>
 </head>
 <body>
+    <div class="bg-glow"></div>
+
+    <header class="brand-head">
+        <span class="brand-logo"><span class="dot">▶</span> MyStore</span>
+        <a class="brand-powered" href="https://mystore.app/" onclick="return false">Powered by <b>MyStore</b></a>
+    </header>
+
     <main class="dl-main">
-        <div class="design-body">__CUSTOM_BODY__</div>
+        <div class="design-body">
+            <div class="design-inner">__CUSTOM_BODY__</div>
+        </div>
         <div class="denied-wrap">
             <div class="card">
-                <div class="icon">🔒</div>
+                <div class="lock">🔒</div>
                 <h2>__DENIED_TITLE__</h2>
                 <p>__DENIED_MSG__</p>
                 <a class="pub-link" href="https://mystore.app/" onclick="return false">⬆ Powered by MyStore</a>
@@ -104,8 +213,11 @@
 
     <footer class="dl-bar">
         <div class="dl-info">
-            <strong>__TITLE__</strong>
-            <span>__FILE_INFO__</span>
+            <img class="foot-thumb" src="__POSTER_URL__" alt="" onerror="this.style.display='none'">
+            <div class="meta">
+                <strong>__TITLE__</strong>
+                <span class="sub"><span>__GENRE__</span><span>·</span><span>__YEAR__</span><span>·</span><span>__FILE_INFO__</span></span>
+            </div>
         </div>
         <span class="dl-note">__FOOTER_NOTE__</span>
         <a class="dl-btn" href="__DOWNLOAD_URL__" download="__FILENAME__" rel="noopener nofollow">⬇ Download __FILENAME__</a>

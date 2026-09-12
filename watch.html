@@ -39,11 +39,26 @@
                     </div>
                 </div>
                 <div class="head-actions">
-                    <a class="btn btn-primary" id="download-page-btn" style="display:none;">⬇ Download</a>
-                    <button class="btn btn-secondary" id="embed-btn">📋 Copy Embed Code</button>
+                    <a class="btn btn-secondary" id="download-page-btn" style="display:none;">⬇ Download Page</a>
                 </div>
             </div>
             <p class="m-desc" id="m-desc"></p>
+
+            <div class="share-card">
+                <div class="share-row">
+                    <span class="share-label">🔗 Download URL</span>
+                    <div class="share-field">
+                        <input type="text" id="download-url" readonly>
+                        <button class="btn btn-primary" id="copy-download-btn">📋 Copy</button>
+                    </div>
+                </div>
+                <div class="share-row">
+                    <span class="share-label">🧩 Embed Player</span>
+                    <div class="share-field">
+                        <button class="btn btn-secondary" id="embed-btn">📋 Copy Embed Code</button>
+                    </div>
+                </div>
+            </div>
 
             <div class="embed-box" id="embed-box" style="display:none;">
                 <p>Paste this code into any website to embed your movie with the custom player:</p>

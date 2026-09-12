@@ -1004,6 +1004,51 @@ input:checked + .slider:before {
   resize: vertical;
 }
 
+.share-card {
+  margin-top: 1.5rem;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.share-row { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.share-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.share-field {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.share-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.82rem;
+  font-family: monospace;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-color);
+  color: var(--text-primary);
+}
+
+.btn.copied {
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
 .error-card {
   text-align: center;
   padding: 4rem 2rem;

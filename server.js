@@ -226,6 +226,7 @@ const publicMovie = (m, origin) => {
         streamUrl: `${base}/stream/${m.streamToken}`,
         embedUrl: `${base}/embed/${m.streamToken}`,
         downloadPageUrl: `${base}/download-page/${m.id}`,
+        downloadUrl: `${base}/download/${m.streamToken}`,
         downloadEnabled: (m.downloadAccess || 'none') !== 'none'
     };
 };
@@ -939,6 +940,21 @@ const server = http.createServer(async (req, res) => {
                 .split('{{YEAR}}').join(movie.year ? String(movie.year) : '')
                 .split('{{DOWNLOAD_BUTTON}}').join(dbBtn);
 
+            if (!dbHtml.trim()) {
+                const posterSrc = movie.posterFile ? `${origin}/poster/${movie.posterFile}` : '';
+                dbHtml = `
+                    <div class="default-hero">
+                        ${movie.posterFile ? `<img class="poster" src="${posterSrc}" alt="${movie.title || 'Poster'}">` : ''}
+                        <div class="default-info">
+                            <span class="pill">MyStore Download</span>
+                            <h1>${movie.title || 'Untitled'}</h1>
+                            <div class="meta">${movie.genre || 'Movie'}${movie.year ? ' · ' + movie.year : ''}</div>
+                            <p>${movie.description || ''}</p>
+                            ${dbBtn}
+                        </div>
+                    </div>`;
+            }
+
             const denied = !allowed;
             const disabled = access === 'none';
 
@@ -947,17 +963,22 @@ const server = http.createServer(async (req, res) => {
                 .replace(/__PAGE_TITLE__/g, `Download ${movie.title}`)
                 .replace(/__CUSTOM_CSS__/g, movie.downloadPageCss || '')
                 .replace(/__CUSTOM_BODY__/g, dbHtml)
+                .replace(/__POSTER_URL__/g, () => movie.posterFile ? `${origin}/poster/${movie.posterFile}` : '')
+                .replace(/__BRAND_URL__/g, () => movie.brandFile ? `${origin}/poster/${movie.brandFile}` : '')
+                .replace(/__DESCRIPTION__/g, () => movie.description || '')
+                .replace(/__GENRE__/g, () => movie.genre || 'Other')
+                .replace(/__YEAR__/g, () => movie.year ? String(movie.year) : '—')
                 .replace(/__DESIGN_DISPLAY__/g, denied ? 'none' : 'block')
                 .replace(/__DENIED_DISPLAY__/g, denied ? 'flex' : 'none')
                 .replace(/__BTN_DISPLAY__/g, (denied || disabled) ? 'none' : 'inline-flex')
                 .replace(/__NOTE_DISPLAY__/g, (!denied && disabled) ? 'block' : 'none')
                 .replace(/__DENIED_TITLE__/g, access === 'none' ? 'Downloads are disabled' : 'Access restricted')
-                .replace(/__DENIED_MSG__/g,
+                .replace(/__DENIED_MSG__/g, () =>
                     access === 'none'
                         ? 'The owner has not enabled downloads for this movie.'
                         : 'Only people the owner approves can download this movie. Ask the owner to add your email.')
                 .replace(/__FOOTER_NOTE__/g, (!denied && disabled) ? 'Downloads are disabled by the owner.' : '')
-                .replace(/__TITLE__/g, movie.title)
+                .replace(/__TITLE__/g, () => movie.title || '')
                 .replace(/__FILE_INFO__/g, fileInfo)
                 .replace(/__DOWNLOAD_URL__/g, `${origin}/download/${movie.streamToken}`)
                 .replace(/__FILENAME__/g, filename);
