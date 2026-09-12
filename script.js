@@ -6,6 +6,31 @@ const API_BASE_URL = (() => {
   return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
 })();
 
+function copyTextToClipboard(text) {
+  return new Promise((resolve) => {
+    const done = (ok) => resolve(ok);
+    const legacy = () => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      done(ok);
+    };
+    if (navigator.clipboard && window.isSecureContext !== false) {
+      navigator.clipboard.writeText(text).then(() => done(true), legacy);
+    } else {
+      legacy();
+    }
+  });
+}
+
 // ============================================
 // THEME - apply saved theme
 // ============================================
@@ -604,21 +629,19 @@ function compressVideoToWebM(file, quality, onProgress) {
     let running = true;
     const chunks = [];
 
+    canvas.width = 2;
+    canvas.height = 2;
+
     const cleanup = () => {
       running = false;
       URL.revokeObjectURL(url);
       video.removeAttribute('src');
+      video.load();
       if (stream) stream.getTracks().forEach(t => t.stop());
     };
 
-    const finish = (blob) => {
-      cleanup();
-      resolve(blob);
-    };
-
-    video.muted = false;
-    video.volume = 0;
     video.setAttribute('playsinline', '');
+    video.preload = 'metadata';
 
     video.onloadedmetadata = () => {
       const scale = Math.min(1, settings.maxW / video.videoWidth, settings.maxH / video.videoHeight);
@@ -633,16 +656,17 @@ function compressVideoToWebM(file, quality, onProgress) {
         return reject(e);
       }
 
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      let audioCtx = null;
+      // Capture the audio track straight from the media element so sound is always
+      // preserved in the compressed file (avoids silent/suspended AudioContext).
       try {
-        audioCtx = new AudioCtx();
-        const dest = audioCtx.createMediaStreamDestination();
-        const src = audioCtx.createMediaElementSource(video);
-        src.connect(dest);
-        src.connect(audioCtx.destination);
-        dest.stream.getAudioTracks().forEach(t => recStream.addTrack(t));
-      } catch (e) { /* audio unavailable */ }
+        const elementStream = video.captureStream
+          ? video.captureStream()
+          : video.mozCaptureStream ? video.mozCaptureStream() : null;
+        if (elementStream) {
+          elementStream.getAudioTracks().forEach(t => recStream.addTrack(t));
+          elementStream.getVideoTracks().forEach(t => t.stop());
+        }
+      } catch (e) { /* audio capture may be limited in some browsers */ }
 
       const mime = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
         .find(t => MediaRecorder.isTypeSupported(t)) || '';
@@ -650,29 +674,29 @@ function compressVideoToWebM(file, quality, onProgress) {
         recorder = new MediaRecorder(recStream, { mimeType: mime, videoBitsPerSecond: settings.vbps, audioBitsPerSecond: settings.abps });
       } catch (e) {
         cleanup();
-        if (audioCtx) audioCtx.close();
         return reject(e);
       }
       stream = recStream;
 
       recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-      recorder.onstop = () => finish(new Blob(chunks, { type: mime || 'video/webm' }));
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mime || 'video/webm' });
+        cleanup();
+        resolve(blob);
+      };
       recorder.start(1000);
 
       const drawLoop = () => {
         if (!running) return;
         if (video.ended) { if (recorder && recorder.state !== 'inactive') recorder.stop(); return; }
-        if (!video.paused) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          if (typeof onProgress === 'function' && video.duration) {
-            onProgress(Math.min(99, Math.round((video.currentTime / video.duration) * 100)));
-          }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        if (typeof onProgress === 'function' && video.duration) {
+          onProgress(Math.min(99, Math.round((video.currentTime / video.duration) * 100)));
         }
         requestAnimationFrame(drawLoop);
       };
 
       video.play().catch(() => {});
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
       requestAnimationFrame(drawLoop);
     };
 
@@ -720,7 +744,9 @@ const initWatch = async () => {
       src: movie.streamUrl,
       poster: movie.posterUrl,
       title: movie.title,
-      autoplay: false
+      autoplay: false,
+      embedUrl: movie.embedUrl,
+      embed: false
     });
 
     // Movie info panel
@@ -740,16 +766,15 @@ const initWatch = async () => {
     const code = `<iframe src="${iframeSrc}" width="640" height="360" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture" style="max-width:100%;border:none;border-radius:12px;"></iframe>`;
     embedCode.value = code;
 
-    embedBtn.addEventListener('click', () => {
-      if (embedBox.style.display === 'none' || !embedBox.style.display) {
-        embedBox.style.display = 'block';
-      } else {
+    if (embedBtn) {
+      embedBtn.addEventListener('click', async () => {
         embedCode.select();
-        document.execCommand('copy');
-        embedBtn.innerText = '✅ Copied!';
+        const ok = await copyTextToClipboard(code);
+        if (!ok) embedBox.style.display = 'block';
+        embedBtn.innerText = ok ? '✅ Copied!' : '❌ Copy failed — select the code above manually';
         setTimeout(() => { embedBtn.innerText = '📋 Copy Embed Code'; }, 2000);
-      }
-    });
+      });
+    }
   } catch (error) {
     console.error('Watch init error:', error);
     document.getElementById('player-slot').style.display = 'none';

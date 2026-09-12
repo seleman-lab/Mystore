@@ -473,11 +473,39 @@ body.cp-theater .cp-page-side { display: none !important; }
 
 .cine-player:fullscreen { width: 100vw; height: 100vh; }
 
-.cine-player .cp-embed-badge {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  z-index: 4;
+.cp-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cp-copy-embed {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.cp-copy-embed:hover { background: rgba(255, 255, 255, 0.18); }
+.cp-copy-embed:active { transform: scale(0.92); }
+.cp-copy-embed.copied { background: #1f9d55; border-color: #1f9d55; }
+
+.cp-copy-embed svg {
+  width: 16px;
+  height: 16px;
+  fill: #fff;
+  display: block;
+}
+
+.cp-embed-badge {
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #fff;
@@ -488,6 +516,8 @@ body.cp-theater .cp-page-side { display: none !important; }
   display: flex;
   align-items: center;
   gap: 6px;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 /* ---------- Mobile touch ---------- */

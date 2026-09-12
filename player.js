@@ -52,7 +52,13 @@ class CinePlayer {
           <div class="cp-brand">🎬</div>
           <span class="name">${this._esc(o.title)}</span>
         </div>
-        ${o.embed && o.embedUrl ? `<a class="cp-embed-badge" href="${o.embedUrl}" target="_blank" rel="noopener">▶ Watch on MyStore</a>` : ''}
+        ${o.embedUrl ? `
+        <div class="cp-top-actions">
+          ${o.embed ? `<a class="cp-embed-badge" href="${o.embedUrl}" target="_blank" rel="noopener">▶ Watch on MyStore</a>` : ''}
+          <button class="cp-copy-embed" data-action="copyEmbed" title="Copy embed link" aria-label="Copy embed link">
+            <svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+          </button>
+        </div>` : ''}
       </div>
 
       <div class="cp-error"><div class="icon">⚠️</div><div class="msg">Could not play this video.</div><div class="detail"></div></div>
@@ -138,7 +144,8 @@ class CinePlayer {
       speedBtn: this.player.querySelector('[data-action="speed"]'),
       speedMenu: this.player.querySelector('.cp-speed-menu'),
       error: this.player.querySelector('.cp-error'),
-      errorDetail: this.player.querySelector('.cp-error .detail')
+      errorDetail: this.player.querySelector('.cp-error .detail'),
+      copyEmbedBtn: this.player.querySelector('.cp-copy-embed')
     };
 
     this.video.controls = false;
@@ -258,6 +265,46 @@ class CinePlayer {
     } catch (e) {}
   }
 
+  copyEmbed() {
+    if (!this.options.embedUrl) return;
+    const btn = this.el.copyEmbedBtn;
+    this._copyToClipboard(this.options.embedUrl).then(() => {
+      if (btn) {
+        const svg = btn.innerHTML;
+        btn.innerHTML = '<span style="font-size:15px;font-weight:700;color:#fff;">✓</span>';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          if (document.body.contains(btn)) { btn.innerHTML = svg; btn.classList.remove('copied'); }
+        }, 1800);
+      }
+    }).catch(() => {});
+  }
+
+  _copyToClipboard(text) {
+    return new Promise((resolve, reject) => {
+      const done = (ok) => ok ? resolve() : reject(new Error('copy failed'));
+      const legacy = () => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        done(ok);
+      };
+      if (navigator.clipboard && window.isSecureContext !== false) {
+        navigator.clipboard.writeText(text).then(() => done(true), legacy);
+      } else {
+        legacy();
+      }
+    });
+  }
+
   /* ---------- Seek ---------- */
   _fmt(t) {
     if (!isFinite(t) || t < 0) return '0:00';
@@ -345,6 +392,14 @@ class CinePlayer {
     // Big play button
     this.el.bigPlay.addEventListener('click', () => this.play());
 
+    // Copy embed link (top-right corner)
+    if (this.el.copyEmbedBtn) {
+      this.el.copyEmbedBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.copyEmbed();
+      });
+    }
+
     // Control buttons (delegated)
     this.player.querySelectorAll('.cp-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -361,6 +416,7 @@ class CinePlayer {
           case 'theater': this.toggleTheater(); break;
           case 'pip': this.togglePiP(); break;
           case 'fullscreen': this.toggleFullscreen(); break;
+          case 'copyEmbed': this.copyEmbed(); break;
         }
         if (btn.dataset.action !== 'speed') this.el.speedMenu.classList.remove('visible');
       });
