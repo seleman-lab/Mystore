@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>__TITLE__ - MyStore Player</title>
+    <link rel="stylesheet" href="/player.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { background: #000; height: 100%; overflow: hidden; }
+        body { display: flex; align-items: center; justify-content: center; }
+        .wrap { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        #player-slot { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        #player-slot .cine-player { border-radius: 0; box-shadow: none; width: 100%; height: 100%; aspect-ratio: auto; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div id="player-slot"></div>
+    </div>
+
+    <script src="/player.js"></script>
+    <script>
+        const slot = document.getElementById('player-slot');
+        new CinePlayer(slot, {
+            src: '__STREAM_URL__',
+            poster: '__POSTER_URL__' || null,
+            title: '__TITLE__',
+            autoplay: false,
+            embed: true,
+            embedUrl: '__LINK__'
+        });
+    </script>
+</body>
+</html>

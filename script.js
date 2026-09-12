@@ -1,9 +1,40 @@
 // API Configuration
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? `http://${window.location.hostname}:3000`
-  : 'https://mystore-1-tp7b.onrender.com';
+  : 'http://' + window.location.host;
 
-console.log('API Base URL:', API_BASE_URL);
+// ============================================
+// THEME - apply saved theme
+// ============================================
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'dark') {
+  document.body.classList.add('dark-theme');
+} else {
+  document.body.classList.remove('dark-theme');
+}
+
+// ============================================
+// MOBILE MENU TOGGLE
+// ============================================
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+const navLinks = document.getElementById('nav-links');
+if (mobileMenuBtn && navLinks) {
+  mobileMenuBtn.addEventListener('click', () => navLinks.classList.toggle('active'));
+}
+
+// ============================================
+// LOGOUT HANDLER
+// ============================================
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try { await fetch(`${API_BASE_URL}/logout`, { method: 'POST', credentials: 'include' }); } catch (err) {}
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    window.location.href = 'login.html';
+  });
+}
 
 // ============================================
 // 1. SIGNUP FORM HANDLER
@@ -12,37 +43,23 @@ const signupForm = document.getElementById('signup-form');
 if (signupForm) {
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const name = document.getElementById('name').value.trim();
     const email = document.getElementById('email').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirm-password').value;
 
-    // Validation
-    if (!name || !email || !phone || !password || !confirmPassword) {
-      return alert('❌ All fields are required');
-    }
+    if (!name || !email || !phone || !password || !confirmPassword) return alert('❌ All fields are required');
+    if (password !== confirmPassword) return alert('❌ Passwords do not match');
+    if (password.length < 8) return alert('❌ Password must be at least 8 characters');
 
-    if (password !== confirmPassword) {
-      return alert('❌ Passwords do not match');
-    }
-
-    if (password.length < 8) {
-      return alert('❌ Password must be at least 8 characters');
-    }
-
-    // Get security questions
     const q1 = document.getElementById('security-q1').value;
     const a1 = document.getElementById('security-a1').value.trim();
     const q2 = document.getElementById('security-q2').value;
     const a2 = document.getElementById('security-a2').value.trim();
     const q3 = document.getElementById('security-q3').value;
     const a3 = document.getElementById('security-a3').value.trim();
-
-    if (!q1 || !a1 || !q2 || !a2 || !q3 || !a3) {
-      return alert('❌ Please answer all security questions');
-    }
+    if (!q1 || !a1 || !q2 || !a2 || !q3 || !a3) return alert('❌ Please answer all security questions');
 
     const securityQuestions = [
       { question: q1, answer: a1 },
@@ -60,17 +77,9 @@ if (signupForm) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          name,
-          email,
-          phone,
-          password,
-          securityQuestions
-        })
+        body: JSON.stringify({ name, email, phone, password, securityQuestions })
       });
-
       const data = await response.json();
-
       if (response.ok) {
         alert('✅ Account created successfully! Redirecting to login...');
         window.location.href = 'login.html';
@@ -78,7 +87,6 @@ if (signupForm) {
         alert(`❌ ${data.error || 'Signup failed'}`);
       }
     } catch (error) {
-      console.error('Signup error:', error);
       alert('❌ Network error. Please check your connection and try again.');
     } finally {
       submitBtn.innerText = originalText;
@@ -94,13 +102,9 @@ const loginForm = document.getElementById('login-form');
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-
-    if (!email || !password) {
-      return alert('❌ Email and password are required');
-    }
+    if (!email || !password) return alert('❌ Email and password are required');
 
     const submitBtn = loginForm.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerText;
@@ -114,11 +118,8 @@ if (loginForm) {
         credentials: 'include',
         body: JSON.stringify({ email, password })
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        alert('✅ Login successful!');
         localStorage.setItem('userEmail', email);
         localStorage.setItem('userName', data.user.name);
         window.location.href = 'dashboard.html';
@@ -126,7 +127,6 @@ if (loginForm) {
         alert(`❌ ${data.error || 'Login failed'}`);
       }
     } catch (error) {
-      console.error('Login error:', error);
       alert('❌ Network error. Please check your connection and try again.');
     } finally {
       submitBtn.innerText = originalText;
@@ -142,16 +142,10 @@ const emailForm = document.getElementById('email-form');
 if (emailForm) {
   emailForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const email = document.getElementById('email').value.trim();
-
-    if (!email) {
-      return alert('❌ Email is required');
-    }
+    if (!email) return alert('❌ Email is required');
 
     const submitBtn = emailForm.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerText;
-    submitBtn.innerText = 'Loading...';
     submitBtn.disabled = true;
 
     try {
@@ -161,21 +155,16 @@ if (emailForm) {
         credentials: 'include',
         body: JSON.stringify({ email })
       });
-
       const data = await response.json();
-
       if (response.ok) {
         sessionStorage.setItem('resetEmail', email);
-        alert('✅ Email verified! Proceeding to security questions...');
         window.location.href = 'answer-questions.html';
       } else {
         alert(`❌ ${data.error || 'Email not found'}`);
       }
     } catch (error) {
-      console.error('Email verification error:', error);
       alert('❌ Network error. Please try again.');
     } finally {
-      submitBtn.innerText = originalText;
       submitBtn.disabled = false;
     }
   });
@@ -187,14 +176,12 @@ if (emailForm) {
 const loadSecurityQuestions = async () => {
   const qContainer = document.getElementById('questions-container');
   if (!qContainer) return;
-
   const email = sessionStorage.getItem('resetEmail');
   if (!email) {
     alert('❌ Session expired. Please start over.');
     window.location.href = 'forgot.html';
     return;
   }
-
   try {
     const response = await fetch(`${API_BASE_URL}/get-security-questions`, {
       method: 'POST',
@@ -202,25 +189,16 @@ const loadSecurityQuestions = async () => {
       credentials: 'include',
       body: JSON.stringify({ email })
     });
-
     const data = await response.json();
-
     if (response.ok) {
       const questions = data.questions || [];
       qContainer.innerHTML = '';
-
       questions.forEach((question, index) => {
         const questionDiv = document.createElement('div');
         questionDiv.className = 'form-group';
         questionDiv.innerHTML = `
           <label for="answer-${index + 1}"><strong>Q${index + 1}: ${question}</strong></label>
-          <input 
-            type="text" 
-            id="answer-${index + 1}" 
-            class="security-answer form-control"
-            placeholder="Your answer" 
-            required
-          >
+          <input type="text" id="answer-${index + 1}" class="security-answer form-control" placeholder="Your answer" required>
         `;
         qContainer.appendChild(questionDiv);
       });
@@ -229,42 +207,29 @@ const loadSecurityQuestions = async () => {
       window.location.href = 'forgot.html';
     }
   } catch (error) {
-    console.error('Error loading security questions:', error);
     alert('❌ Network error loading questions.');
     window.location.href = 'forgot.html';
   }
 };
+if (document.getElementById('questions-container')) loadSecurityQuestions();
 
 // ============================================
 // 3.2. ANSWER SECURITY QUESTIONS FORM
 // ============================================
 const answerQuestionsForm = document.getElementById('answer-questions-form');
-const submitAnswersBtn = document.getElementById('submit-answers-btn');
-
-if (answerQuestionsForm && submitAnswersBtn) {
+if (answerQuestionsForm) {
   answerQuestionsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const email = sessionStorage.getItem('resetEmail');
-    if (!email) {
-      return alert('❌ Session expired. Please start over.');
-    }
+    if (!email) return alert('❌ Session expired. Please start over.');
 
     const answerInputs = document.querySelectorAll('.security-answer');
-    if (answerInputs.length === 0) {
-      return alert('❌ Questions not loaded. Please refresh and try again.');
-    }
-
+    if (answerInputs.length === 0) return alert('❌ Questions not loaded. Please refresh and try again.');
     const answers = Array.from(answerInputs).map(input => input.value.trim());
+    if (answers.some(a => !a)) return alert('❌ Please answer all security questions!');
 
-    if (answers.some(a => !a)) {
-      return alert('❌ Please answer all security questions!');
-    }
-
-    const originalText = submitAnswersBtn.innerText;
-    submitAnswersBtn.innerText = 'Verifying...';
-    submitAnswersBtn.disabled = true;
-
+    const submitBtn = document.getElementById('submit-answers-btn');
+    submitBtn.disabled = true;
     try {
       const response = await fetch(`${API_BASE_URL}/verify-security-questions`, {
         method: 'POST',
@@ -272,22 +237,17 @@ if (answerQuestionsForm && submitAnswersBtn) {
         credentials: 'include',
         body: JSON.stringify({ email, answers })
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        sessionStorage.setItem('resetToken', data.resetToken);
         alert('✅ Security answers verified!\n\nAn OTP has been sent to your email: ' + email);
         window.location.href = 'verify-otp.html';
       } else {
         alert(`❌ ${data.error || 'Incorrect answers. Please try again.'}`);
       }
     } catch (error) {
-      console.error('Security questions verification error:', error);
-      alert('❌ A network error occurred. Check the console for details.');
+      alert('❌ A network error occurred.');
     } finally {
-      submitAnswersBtn.innerText = originalText;
-      submitAnswersBtn.disabled = false;
+      submitBtn.disabled = false;
     }
   });
 }
@@ -299,23 +259,13 @@ const verifyOtpForm = document.getElementById('verify-otp-form');
 if (verifyOtpForm) {
   verifyOtpForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const email = sessionStorage.getItem('resetEmail');
     const otp = document.getElementById('otp-input').value.trim();
-
-    if (!email) {
-      return alert('❌ Session expired. Please start over.');
-    }
-
-    if (!otp) {
-      return alert('❌ Please enter the OTP code');
-    }
+    if (!email) return alert('❌ Session expired. Please start over.');
+    if (!otp) return alert('❌ Please enter the OTP code');
 
     const submitBtn = verifyOtpForm.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerText;
-    submitBtn.innerText = 'Verifying OTP...';
     submitBtn.disabled = true;
-
     try {
       const response = await fetch(`${API_BASE_URL}/verify-otp`, {
         method: 'POST',
@@ -323,9 +273,7 @@ if (verifyOtpForm) {
         credentials: 'include',
         body: JSON.stringify({ email, otp })
       });
-
       const data = await response.json();
-
       if (response.ok) {
         sessionStorage.setItem('resetToken', data.resetToken);
         alert('✅ OTP verified! Redirecting to password reset...');
@@ -334,10 +282,8 @@ if (verifyOtpForm) {
         alert(`❌ ${data.error || 'Invalid OTP'}`);
       }
     } catch (error) {
-      console.error('OTP verification error:', error);
-      alert('❌ A network error occurred. Please try again.');
+      alert('❌ A network error occurred.');
     } finally {
-      submitBtn.innerText = originalText;
       submitBtn.disabled = false;
     }
   });
@@ -350,32 +296,16 @@ const resetPasswordForm = document.getElementById('reset-password-form');
 if (resetPasswordForm) {
   resetPasswordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const resetToken = sessionStorage.getItem('resetToken');
     const newPassword = document.getElementById('new-password').value;
     const confirmNewPassword = document.getElementById('confirm-new-password').value;
-
-    if (!resetToken) {
-      return alert('❌ Session expired. Please start over.');
-    }
-
-    if (!newPassword || !confirmNewPassword) {
-      return alert('❌ Please enter both passwords');
-    }
-
-    if (newPassword !== confirmNewPassword) {
-      return alert('❌ Passwords do not match');
-    }
-
-    if (newPassword.length < 8) {
-      return alert('❌ Password must be at least 8 characters');
-    }
+    if (!resetToken) return alert('❌ Session expired. Please start over.');
+    if (!newPassword || !confirmNewPassword) return alert('❌ Please enter both passwords');
+    if (newPassword !== confirmNewPassword) return alert('❌ Passwords do not match');
+    if (newPassword.length < 8) return alert('❌ Password must be at least 8 characters');
 
     const submitBtn = resetPasswordForm.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerText;
-    submitBtn.innerText = 'Resetting Password...';
     submitBtn.disabled = true;
-
     try {
       const response = await fetch(`${API_BASE_URL}/reset-password-otp`, {
         method: 'POST',
@@ -383,9 +313,7 @@ if (resetPasswordForm) {
         credentials: 'include',
         body: JSON.stringify({ resetToken, newPassword })
       });
-
       const data = await response.json();
-
       if (response.ok) {
         alert('✅ Password reset successfully! Redirecting to login...');
         sessionStorage.removeItem('resetEmail');
@@ -395,249 +323,326 @@ if (resetPasswordForm) {
         alert(`❌ ${data.error || 'Password reset failed'}`);
       }
     } catch (error) {
-      console.error('Password reset error:', error);
-      alert('❌ A network error occurred. Please try again.');
+      alert('❌ A network error occurred.');
     } finally {
-      submitBtn.innerText = originalText;
       submitBtn.disabled = false;
     }
   });
 }
 
 // ============================================
-// 6. DASHBOARD - CHECK AUTHENTICATION
+// 6. MOVIE LIBRARY (DASHBOARD)
 // ============================================
-const checkAuthentication = () => {
-  const userEmail = localStorage.getItem('userEmail');
-  const dashboardContent = document.getElementById('dashboard-content');
-  const loginPrompt = document.getElementById('login-prompt');
-
-  if (!userEmail && dashboardContent) {
-    dashboardContent.style.display = 'none';
-    loginPrompt.style.display = 'block';
-  }
-};
-
-if (window.location.pathname.includes('dashboard')) {
-  checkAuthentication();
-}
-
-// ============================================
-// 6.1. FILE UPLOAD HANDLER
-// ============================================
-const uploadBtn = document.getElementById('upload-btn');
-const fileInput = document.getElementById('file-input');
-
-if (uploadBtn && fileInput) {
-  uploadBtn.addEventListener('click', () => {
-    fileInput.click();
-  });
-
-  fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const maxSize = 50 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return alert('File is too large. Maximum size is 50 MB.');
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    uploadBtn.disabled = true;
-    uploadBtn.innerText = 'Uploading...';
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/upload`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('File uploaded successfully!');
-        fileInput.value = '';
-        loadFiles();
-        loadStorageStats();
-      } else {
-        alert(`Upload failed: ${data.error || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert('Upload failed. Make sure the server is running.');
-    } finally {
-      uploadBtn.disabled = false;
-      uploadBtn.innerText = '+ Upload New';
-    }
-  });
-}
-
-// ============================================
-// 6.2. LOAD FILES (DASHBOARD)
-// ============================================
-const loadFiles = async () => {
-  const mediaGrid = document.getElementById('media-grid');
-  if (!mediaGrid) return;
+const loadMovies = async () => {
+  const grid = document.getElementById('movies-grid');
+  if (!grid) return;
+  grid.innerHTML = `<div class="empty-state"><div class="empty-icon">⏳</div><h3>Loading your library...</h3></div>`;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/files`, {
-      credentials: 'include'
-    });
+    const response = await fetch(`${API_BASE_URL}/movies`, { credentials: 'include' });
+    if (response.status === 401) { window.location.href = 'login.html'; return; }
+    if (!response.ok) throw new Error('Failed to load movies');
 
-    if (!response.ok) return;
-
-    const files = await response.json();
-
-    if (files.length === 0) {
-      mediaGrid.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
-          <p style="font-size: 3rem; margin-bottom: 1rem;">📁</p>
-          <p>No files yet. Click "Upload New" to get started.</p>
+    const movies = await response.json();
+    if (movies.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🎬</div>
+          <h3>No movies yet</h3>
+          <p>Upload your first movie to start your collection.</p>
+          <a href="upload.html" class="btn btn-primary">+ Upload Movie</a>
         </div>`;
       return;
     }
 
-    mediaGrid.innerHTML = '';
-    files.forEach(file => {
-      const isVideo = file.mimeType && file.mimeType.startsWith('video/');
-      const ext = file.filename.split('.').pop().toLowerCase();
-      const isImage = ['png', 'jpg', 'jpeg', 'gif'].includes(ext);
-      const hasToken = file.embedToken;
+    grid.innerHTML = '';
+    movies.forEach(movie => {
+      const card = document.createElement('a');
+      card.className = 'movie-card';
+      card.href = `watch.html?id=${movie.id}`;
 
-      const item = document.createElement('div');
-      item.className = 'media-item';
-
-      let preview = '';
-      if (isVideo && hasToken) {
-        preview = `<video src="${API_BASE_URL}/embed/${file.embedToken}" muted></video>`;
-      } else if (isImage && hasToken) {
-        preview = `<img src="${API_BASE_URL}/embed/${file.embedToken}" alt="${file.originalName}" loading="lazy">`;
-      } else {
-        const icon = isVideo ? '🎬' : isImage ? '🖼️' : '📄';
-        preview = `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem;color:var(--text-secondary);">${icon}</div>`;
-      }
-
-      item.innerHTML = `
-        ${preview}
-        <div class="media-overlay">
-          <span style="font-weight:600;font-size:0.9rem;">${file.originalName}</span>
-          <div class="media-actions">
-            <button class="download-btn" data-filename="${file.filename}">Download</button>
-            <button class="delete-btn" data-filename="${file.filename}">Delete</button>
+      card.innerHTML = `
+        <div class="movie-poster-wrap">
+          ${movie.posterUrl
+            ? `<img class="movie-poster" src="${movie.posterUrl}" alt="${movie.title}" loading="lazy">`
+            : `<div class="movie-poster placeholder"><span>🎬</span></div>`}
+          <div class="movie-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+          <div class="movie-badge genre">${movie.genre || 'Movie'}</div>
+        </div>
+        <div class="movie-card-info">
+          <h3 class="movie-title">${movie.title}</h3>
+          <div class="movie-sub">
+            ${movie.year ? `<span>${movie.year}</span>` : ''}
+            <span>👁 ${movie.views.toLocaleString()}</span>
           </div>
         </div>
+        <button class="movie-delete" data-id="${movie.id}" title="Delete movie">🗑️</button>
       `;
 
-      mediaGrid.appendChild(item);
+      grid.appendChild(card);
     });
 
-    // Add event listeners for download and delete
-    document.querySelectorAll('.download-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const filename = btn.dataset.filename;
-        window.open(`${API_BASE_URL}/download?file=${encodeURIComponent(filename)}`, '_blank');
-      });
-    });
-
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('Delete this file?')) return;
-        const filename = btn.dataset.filename;
+    grid.querySelectorAll('.movie-delete').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!confirm('Delete this movie and all its files from local storage?')) return;
         try {
-          const res = await fetch(`${API_BASE_URL}/delete-file`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ filename })
-          });
+          const res = await fetch(`${API_BASE_URL}/movie/${btn.dataset.id}`, { method: 'DELETE', credentials: 'include' });
           const data = await res.json();
           if (res.ok) {
-            alert('File deleted');
-            loadFiles();
+            alert('Movie deleted');
+            loadMovies();
             loadStorageStats();
           } else {
             alert(data.error || 'Delete failed');
           }
-        } catch (err) {
-          alert('Delete failed');
-        }
+        } catch (err) { alert('Delete failed'); }
       });
     });
   } catch (error) {
-    console.error('Load files error:', error);
+    console.error('Load movies error:', error);
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><h3>Could not load your library</h3><p>${error.message}</p></div>`;
   }
 };
-
-// Load files on dashboard page
-if (document.getElementById('media-grid')) {
-  loadFiles();
-}
+if (document.getElementById('movies-grid')) loadMovies();
 
 // ============================================
-// 6.3. LOAD STORAGE STATS
+// 6.1. STORAGE STATS
 // ============================================
 const loadStorageStats = async () => {
   const storageUsed = document.getElementById('storage-used');
-  const storageUsedText = document.getElementById('storage-used-text');
-  const storageLimitText = document.getElementById('storage-limit-text');
-  const storageRemainingText = document.getElementById('storage-remaining-text');
   if (!storageUsed) return;
-
   try {
-    const response = await fetch(`${API_BASE_URL}/storage-stats`, {
-      credentials: 'include'
-    });
+    const response = await fetch(`${API_BASE_URL}/storage-stats`, { credentials: 'include' });
     if (!response.ok) return;
     const stats = await response.json();
 
-    const usedMB = (stats.used / (1024 * 1024)).toFixed(1);
-    const limitMB = (stats.limit / (1024 * 1024)).toFixed(0);
-    const remainingMB = (stats.remaining / (1024 * 1024)).toFixed(1);
+    const usedGB = (stats.used / (1024 * 1024 * 1024)).toFixed(2);
+    const limitGB = (stats.limit / (1024 * 1024 * 1024)).toFixed(0);
+    const remainingGB = (stats.remaining / (1024 * 1024 * 1024)).toFixed(2);
 
     storageUsed.style.width = stats.percentage + '%';
-    if (storageUsedText) storageUsedText.textContent = usedMB + ' MB';
-    if (storageLimitText) storageLimitText.textContent = limitMB + ' MB';
-    if (storageRemainingText) storageRemainingText.textContent = remainingMB + ' MB';
+    document.getElementById('storage-used-text').textContent = usedGB + ' GB';
+    document.getElementById('storage-limit-text').textContent = limitGB + ' GB';
+    document.getElementById('storage-remaining-text').textContent = remainingGB + ' GB';
 
-    if (stats.percentage > 90) {
-      storageUsed.style.background = 'linear-gradient(to right, #ef4444, #dc2626)';
-    } else if (stats.percentage > 70) {
-      storageUsed.style.background = 'linear-gradient(to right, #f59e0b, #d97706)';
+    if (stats.percentage > 90) storageUsed.style.background = 'linear-gradient(to right, #ef4444, #dc2626)';
+    else if (stats.percentage > 70) storageUsed.style.background = 'linear-gradient(to right, #f59e0b, #d97706)';
+  } catch (error) { console.error('Storage stats error:', error); }
+};
+if (document.getElementById('storage-used')) loadStorageStats();
+
+// ============================================
+// 7. UPLOAD FORM
+// ============================================
+const uploadForm = document.getElementById('upload-form');
+if (uploadForm) {
+  const videoInput = document.getElementById('video-file');
+  const posterInput = document.getElementById('poster-file');
+  let videoFile = null;
+  let posterFile = null;
+
+  const videoDz = document.getElementById('video-dropzone');
+  const posterDz = document.getElementById('poster-dropzone');
+
+  const setupDropzone = (dz, input, onPick, nameElId) => {
+    dz.addEventListener('click', (e) => { if (e.target.tagName !== 'INPUT') input.click(); });
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+    dz.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dz.classList.remove('dragover');
+      if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; onPick(e.dataTransfer.files[0]); }
+    });
+    input.addEventListener('change', () => { if (input.files.length) onPick(input.files[0]); });
+
+    dz.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+  };
+
+  setupDropzone(videoDz, videoInput, (f) => {
+    videoFile = f;
+    document.getElementById('video-name').textContent = f.name;
+    document.getElementById('video-name').classList.add('selected');
+  }, 'video-name');
+
+  setupDropzone(posterDz, posterInput, (f) => {
+    posterFile = f;
+    document.getElementById('poster-name').textContent = f.name;
+    document.getElementById('poster-name').classList.add('selected');
+  }, 'poster-name');
+
+  uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const title = document.getElementById('m-title-input').value.trim();
+    if (!title) return alert('❌ Please enter a movie title');
+    if (!videoFile) return alert('❌ Please select a video file');
+    if (videoFile.size > 5 * 1024 * 1024 * 1024) return alert('❌ Video is larger than 5 GB.');
+
+    const submitBtn = document.getElementById('upload-submit');
+    submitBtn.disabled = true;
+    submitBtn.innerText = 'Uploading...';
+
+    try {
+      // 1) Upload video (streamed to local disk)
+      const vidForm = new FormData();
+      vidForm.append('file', videoFile);
+      document.getElementById('video-progress-row').style.display = 'flex';
+      const videoResult = await uploadWithProgress(videoFile, `${API_BASE_URL}/upload/video`, document.getElementById('video-progress'), document.getElementById('video-progress-text'));
+      if (!videoResult.ok) {
+        const data = JSON.parse(videoResult.response || '{}');
+        throw new Error(data.error || 'Video upload failed');
+      }
+      const vidData = JSON.parse(videoResult.response);
+
+      // 2) Optional poster
+      let posterFileResult = null;
+      if (posterFile) {
+        const posterResult = await uploadWithProgress(posterFile, `${API_BASE_URL}/upload/poster`, null, null);
+        if (!posterResult.ok) {
+          const data = JSON.parse(posterResult.response || '{}');
+          throw new Error(data.error || 'Poster upload failed');
+        }
+        posterFileResult = JSON.parse(posterResult.response);
+      }
+
+      // 3) Save movie metadata
+      const saveRes = await fetch(`${API_BASE_URL}/movie`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          title,
+          description: document.getElementById('m-desc-input').value.trim(),
+          genre: document.getElementById('m-genre-input').value,
+          year: document.getElementById('m-year-input').value,
+          videoFile: vidData.videoFile,
+          posterFile: posterFileResult ? posterFileResult.posterFile : null
+        })
+      });
+      const saveData = await saveRes.json();
+      if (!saveRes.ok) throw new Error(saveData.error || 'Could not save movie');
+
+      alert('✅ Movie uploaded successfully!');
+      uploadForm.reset();
+      document.getElementById('video-name').textContent = 'No file selected';
+      document.getElementById('poster-name').textContent = 'No file selected';
+      window.location.href = 'dashboard.html';
+    } catch (error) {
+      alert(`❌ ${error.message || 'Upload failed'}`);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerText = '🚀 Upload Movie';
     }
+  });
+}
+
+function uploadWithProgress(file, url, progressEl, textEl) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
+    xhr.withCredentials = true;
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable && progressEl) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        progressEl.style.width = pct + '%';
+        if (textEl) textEl.textContent = pct + '%';
+      }
+    });
+
+    xhr.onload = () => resolve({ ok: xhr.status >= 200 && xhr.status < 300, response: xhr.responseText, status: xhr.status });
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.send(file);
+  });
+}
+
+// ============================================
+// 8. WATCH PAGE
+// ============================================
+const initWatch = async () => {
+  const slot = document.getElementById('player-slot');
+  if (!slot) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  if (!id) {
+    document.getElementById('player-slot').style.display = 'none';
+    document.getElementById('movie-error').style.display = 'block';
+    document.getElementById('movie-error-msg').textContent = 'No movie selected.';
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/movie/${id}`, { credentials: 'include' });
+    if (response.status === 401) { window.location.href = 'login.html'; return; }
+    if (response.status === 403 || response.status === 404) {
+      document.getElementById('player-slot').style.display = 'none';
+      document.getElementById('movie-error').style.display = 'block';
+      document.getElementById('movie-error-msg').textContent = 'This movie was not found or you do not have access.';
+      return;
+    }
+    if (!response.ok) throw new Error('Failed to load movie');
+
+    const movie = await response.json();
+    document.title = `${movie.title} - MyStore`;
+
+    new CinePlayer(slot, {
+      src: movie.streamUrl,
+      poster: movie.posterUrl,
+      title: movie.title,
+      autoplay: false
+    });
+
+    // Movie info panel
+    const info = document.getElementById('movie-info');
+    info.style.display = 'block';
+    document.getElementById('m-title').textContent = movie.title;
+    document.getElementById('m-year').textContent = movie.year ? movie.year : '—';
+    document.getElementById('m-genre').textContent = movie.genre || 'Other';
+    document.getElementById('m-views').textContent = `👁 ${movie.views.toLocaleString()} clicks`;
+    document.getElementById('m-desc').textContent = movie.description || 'No description provided.';
+
+    // Embed code
+    const embedBtn = document.getElementById('embed-btn');
+    const embedBox = document.getElementById('embed-box');
+    const embedCode = document.getElementById('embed-code');
+    const iframeSrc = movie.embedUrl;
+    const code = `<iframe src="${iframeSrc}" width="640" height="360" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture" style="max-width:100%;border:none;border-radius:12px;"></iframe>`;
+    embedCode.value = code;
+
+    embedBtn.addEventListener('click', () => {
+      if (embedBox.style.display === 'none' || !embedBox.style.display) {
+        embedBox.style.display = 'block';
+      } else {
+        embedCode.select();
+        document.execCommand('copy');
+        embedBtn.innerText = '✅ Copied!';
+        setTimeout(() => { embedBtn.innerText = '📋 Copy Embed Code'; }, 2000);
+      }
+    });
   } catch (error) {
-    console.error('Storage stats error:', error);
+    console.error('Watch init error:', error);
+    document.getElementById('player-slot').style.display = 'none';
+    document.getElementById('movie-error').style.display = 'block';
+    document.getElementById('movie-error-msg').textContent = error.message;
   }
 };
-
-if (document.getElementById('storage-used')) {
-  loadStorageStats();
-}
+if (document.getElementById('player-slot')) initWatch();
 
 // ============================================
-// 6.4. THEME LOAD & TOGGLE SYNC
+// 9. SETTINGS - PROFILE & THEME
 // ============================================
-// Apply saved theme on every page
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'dark') {
-  document.body.classList.add('dark-theme');
-} else {
-  document.body.classList.remove('dark-theme');
-}
-
 const themeToggle = document.getElementById('theme-toggle');
 if (themeToggle) {
   themeToggle.checked = savedTheme === 'dark';
-
   themeToggle.addEventListener('change', async () => {
     const isDark = themeToggle.checked;
     const theme = isDark ? 'dark' : 'light';
-
     document.body.classList.toggle('dark-theme', isDark);
     localStorage.setItem('theme', theme);
-
     try {
       await fetch(`${API_BASE_URL}/settings`, {
         method: 'POST',
@@ -645,55 +650,31 @@ if (themeToggle) {
         credentials: 'include',
         body: JSON.stringify({ theme })
       });
-    } catch (error) {
-      console.error('Theme sync error:', error);
-    }
+    } catch (error) { console.error('Theme sync error:', error); }
   });
 }
 
-// ============================================
-// 6.5. SETTINGS - LOAD PROFILE
-// ============================================
 const settingsForm = document.getElementById('settings-form');
 if (settingsForm) {
   const loadProfile = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/get-profile`, {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        window.location.href = 'login.html';
-        return;
-      }
+      const response = await fetch(`${API_BASE_URL}/get-profile`, { credentials: 'include' });
+      if (!response.ok) { window.location.href = 'login.html'; return; }
       const data = await response.json();
-
-      const nameInput = document.getElementById('settings-name');
-      const emailInput = document.getElementById('settings-email');
-      const phoneInput = document.getElementById('settings-phone');
-
-      if (nameInput) nameInput.value = data.name || '';
-      if (emailInput) emailInput.value = data.email || '';
-      if (phoneInput) phoneInput.value = data.phone || '';
-    } catch (error) {
-      console.error('Load profile error:', error);
-    }
+      if (document.getElementById('settings-name')) document.getElementById('settings-name').value = data.name || '';
+      if (document.getElementById('settings-email')) document.getElementById('settings-email').value = data.email || '';
+      if (document.getElementById('settings-phone')) document.getElementById('settings-phone').value = data.phone || '';
+    } catch (error) { console.error('Load profile error:', error); }
   };
-
   loadProfile();
 
   settingsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const name = document.getElementById('settings-name').value.trim();
     const phone = document.getElementById('settings-phone').value.trim();
-
     if (!name) return alert('Name is required');
-
     const submitBtn = settingsForm.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerText;
-    submitBtn.innerText = 'Saving...';
     submitBtn.disabled = true;
-
     try {
       const response = await fetch(`${API_BASE_URL}/update-profile`, {
         method: 'POST',
@@ -701,53 +682,30 @@ if (settingsForm) {
         credentials: 'include',
         body: JSON.stringify({ name, phone })
       });
-
       const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('userName', name);
-        alert('Profile updated successfully!');
-      } else {
-        alert(data.error || 'Update failed');
-      }
-    } catch (error) {
-      alert('Failed to update profile');
-    } finally {
-      submitBtn.innerText = originalText;
-      submitBtn.disabled = false;
-    }
+      if (response.ok) { localStorage.setItem('userName', name); alert('Profile updated successfully!'); }
+      else alert(data.error || 'Update failed');
+    } catch (error) { alert('Failed to update profile'); }
+    finally { submitBtn.disabled = false; }
   });
 }
 
 // ============================================
-// 6.6. SETTINGS - CHANGE PASSWORD
+// 10. SETTINGS - CHANGE PASSWORD
 // ============================================
 const passwordForm = document.getElementById('password-form');
 if (passwordForm) {
   passwordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const currentPassword = document.getElementById('current-password').value;
     const newPassword = document.getElementById('new-password').value;
     const confirmPassword = document.getElementById('confirm-password').value;
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      return alert('All password fields are required');
-    }
-
-    if (newPassword !== confirmPassword) {
-      return alert('New passwords do not match');
-    }
-
-    if (newPassword.length < 8) {
-      return alert('New password must be at least 8 characters');
-    }
+    if (!currentPassword || !newPassword || !confirmPassword) return alert('All password fields are required');
+    if (newPassword !== confirmPassword) return alert('New passwords do not match');
+    if (newPassword.length < 8) return alert('New password must be at least 8 characters');
 
     const submitBtn = passwordForm.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerText;
-    submitBtn.innerText = 'Changing...';
     submitBtn.disabled = true;
-
     try {
       const response = await fetch(`${API_BASE_URL}/change-password`, {
         method: 'POST',
@@ -755,47 +713,10 @@ if (passwordForm) {
         credentials: 'include',
         body: JSON.stringify({ currentPassword, newPassword })
       });
-
       const data = await response.json();
-
-      if (response.ok) {
-        alert('Password changed successfully!');
-        passwordForm.reset();
-      } else {
-        alert(data.error || 'Password change failed');
-      }
-    } catch (error) {
-      alert('Failed to change password');
-    } finally {
-      submitBtn.innerText = originalText;
-      submitBtn.disabled = false;
-    }
-  });
-}
-
-// ============================================
-// 7. LOGOUT HANDLER
-// ============================================
-const logoutBtn = document.getElementById('logout-btn');
-if (logoutBtn) {
-  logoutBtn.addEventListener('click', () => {
-    if (confirm('Are you sure you want to log out?')) {
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userName');
-      alert('✅ Logged out successfully!');
-      window.location.href = 'login.html';
-    }
-  });
-}
-
-// ============================================
-// 8. MOBILE MENU TOGGLE
-// ============================================
-const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-const navLinks = document.getElementById('nav-links');
-
-if (mobileMenuBtn && navLinks) {
-  mobileMenuBtn.addEventListener('click', () => {
-    navLinks.classList.toggle('active');
+      if (response.ok) { alert('Password changed successfully!'); passwordForm.reset(); }
+      else alert(data.error || 'Password change failed');
+    } catch (error) { alert('Failed to change password'); }
+    finally { submitBtn.disabled = false; }
   });
 }

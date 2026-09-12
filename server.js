@@ -2,46 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const cloudinary = require('cloudinary').v2;
-const { Resend } = require('resend'); // Twongereyemo Resend
 
-// Cloudinary config (set env vars for production)
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'mystore',
-    api_key: process.env.CLOUDINARY_API_KEY || '928916128216455',
-    api_secret: process.env.CLOUDINARY_API_SECRET || 'bCJqUzahayCfiNbNNp03DJM09BQ'
-});
-const useCloudinary = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
-
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const PORT = process.env.PORT || 3000;
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-const USERS_FILE = path.join(__dirname, 'users.json');
-const FILES_META = path.join(__dirname, 'files.json');
-const TOKENS_FILE = path.join(__dirname, 'tokens.json');
-const OTP_FILE = path.join(__dirname, 'otp.json');
-const STORAGE_LIMIT = 500 * 1024 * 1024; // 500 MB per user
-
-// Frontend URLs for CORS
-const FRONTEND_URLS = [
-  'https://seleman-lab.github.io',
-  'http://localhost:3000',
-  'http://localhost:5500',
-  'http://localhost:8000',
-  'http://127.0.0.1:3000'
-];
-
-// Ensure necessary directories and files exist
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
-if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]');
-if (!fs.existsSync(FILES_META)) fs.writeFileSync(FILES_META, '[]');
-if (!fs.existsSync(TOKENS_FILE)) fs.writeFileSync(TOKENS_FILE, '[]');
-if (!fs.existsSync(OTP_FILE)) fs.writeFileSync(OTP_FILE, '[]');
-
-<<<<<<< HEAD
-=======
 let nodemailer;
 try {
     nodemailer = require('nodemailer');
@@ -49,27 +10,47 @@ try {
     console.warn("Notice: nodemailer is not installed. Emails will only be logged to the console.");
 }
 
+const PORT = process.env.PORT || 3000;
+const MOVIES_DIR = path.join(__dirname, 'movies');
+const USERS_FILE = path.join(__dirname, 'users.json');
+const MOVIES_FILE = path.join(__dirname, 'movies.json');
+const TOKENS_FILE = path.join(__dirname, 'tokens.json');
+const OTP_FILE = path.join(__dirname, 'otp.json');
+const STORAGE_LIMIT = 20 * 1024 * 1024 * 1024; // 20 GB per user
+const MAX_VIDEO_SIZE = 5 * 1024 * 1024 * 1024; // 5 GB per movie
+const MAX_POSTER_SIZE = 10 * 1024 * 1024;       // 10 MB per poster
+
+// Frontend URLs for CORS
+const FRONTEND_URLS = [
+    'http://localhost:3000',
+    'http://localhost:5500',
+    'http://localhost:8000',
+    'http://localhost:8080',
+    'http://127.0.0.1:3000'
+];
+
+// Ensure necessary directories and files exist
+if (!fs.existsSync(MOVIES_DIR)) fs.mkdirSync(MOVIES_DIR);
+if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]');
+if (!fs.existsSync(MOVIES_FILE)) fs.writeFileSync(MOVIES_FILE, '[]');
+if (!fs.existsSync(TOKENS_FILE)) fs.writeFileSync(TOKENS_FILE, '[]');
+if (!fs.existsSync(OTP_FILE)) fs.writeFileSync(OTP_FILE, '[]');
+
 // SMTP Configuration
 let _transporter = null;
-
 const getTransporter = async () => {
     if (!nodemailer) return null;
     if (_transporter) return _transporter;
 
-    // Use real Gmail credentials if provided
     if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
         _transporter = nodemailer.createTransport({
             service: 'gmail',
-            auth: {
-                user: process.env.GMAIL_USER,
-                pass: process.env.GMAIL_PASS
-            }
+            auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }
         });
-        console.log('📧 Using Gmail SMTP');
+        console.log('Using Gmail SMTP');
         return _transporter;
     }
 
-    // Development fallback: Ethereal fake SMTP (captures emails for preview)
     try {
         const testAccount = await nodemailer.createTestAccount();
         _transporter = nodemailer.createTransport({
@@ -78,8 +59,7 @@ const getTransporter = async () => {
             secure: false,
             auth: { user: testAccount.user, pass: testAccount.pass }
         });
-        console.log('📧 Using Ethereal test email service');
-        console.log('   Preview at: https://ethereal.email/login');
+        console.log('Using Ethereal test email service');
         console.log('   Username:', testAccount.user);
         console.log('   Password:', testAccount.pass);
         return _transporter;
@@ -89,7 +69,6 @@ const getTransporter = async () => {
     }
 };
 
->>>>>>> 11bc522639be165638c705d1f402c28a40b49eca
 const sessions = {};
 
 // --- JSON Database Helpers ---
@@ -102,10 +81,7 @@ const escapeHTML = (str) => {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 };
 
-const isValidEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-};
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 // --- Cryptography ---
 const hashPassword = (password) => {
@@ -120,18 +96,8 @@ const verifyPassword = (password, hash, salt) => {
 };
 
 // --- OTP Generation & Verification ---
-const generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
-};
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-<<<<<<< HEAD
-// Send OTP via Resend
-const sendOTPToUserEmail = async (userEmail, otp) => {
-    try {
-        const data = await resend.emails.send({
-            from: 'MyStore <onboarding@resend.dev>',
-=======
-// Send OTP to user's email
 const sendOTPToUserEmail = async (userEmail, otp) => {
     const transporter = await getTransporter();
     if (!transporter) {
@@ -139,81 +105,37 @@ const sendOTPToUserEmail = async (userEmail, otp) => {
         return;
     }
     try {
-        const info = await transporter.sendMail({
+        await transporter.sendMail({
             from: process.env.GMAIL_USER || '"MyStore" <noreply@mystore.dev>',
->>>>>>> 11bc522639be165638c705d1f402c28a40b49eca
             to: userEmail,
             subject: 'MyStore - Password Reset OTP Code',
             html: `
                 <h2>Password Reset Request</h2>
                 <p>Your password reset OTP code is:</p>
                 <h1 style="color: #007bff; letter-spacing: 5px; font-size: 48px; font-weight: bold; margin: 20px 0;">${otp}</h1>
-                <p style="font-size: 16px;"><strong>⏱️ This code expires in 10 minutes</strong></p>
+                <p style="font-size: 16px;"><strong>This code expires in 10 minutes</strong></p>
                 <hr>
                 <p style="color: #666; font-size: 14px;">
-                    If you did not request a password reset, please ignore this email.<br>
+                    If you did not request a password reset, please ignore this email.
                     Do not share this code with anyone.
                 </p>
             `
         });
-<<<<<<< HEAD
-        console.log(`✅ OTP sent successfully to ${userEmail}, ID: ${data.id}`);
+        console.log(`OTP sent successfully to ${userEmail}`);
     } catch (error) {
-        console.error("❌ Failed to send OTP email via Resend:", error.message);
-=======
-        console.log(`✅ OTP sent successfully to ${userEmail}`);
-        if (info.messageId && nodemailer.getTestMessageUrl) {
-            const previewUrl = nodemailer.getTestMessageUrl(info);
-            if (previewUrl) console.log('   📬 Preview:', previewUrl);
-        }
-    } catch (error) {
-        console.error("❌ Failed to send OTP email:", error.message);
->>>>>>> 11bc522639be165638c705d1f402c28a40b49eca
+        console.error("Failed to send OTP email:", error.message);
     }
 };
 
-// --- Storage Management ---
-const getStorageStats = (userEmail) => {
-    try {
-        const filesData = readJSON(FILES_META);
-        const userFiles = filesData.filter(f => f.userEmail === userEmail);
-        
-        let totalUsed = 0;
-        userFiles.forEach(file => {
-            try {
-                const filePath = path.join(UPLOADS_DIR, file.filename);
-                if (fs.existsSync(filePath)) {
-                    const stats = fs.statSync(filePath);
-                    totalUsed += stats.size;
-                }
-            } catch (err) {
-                console.error("Error getting file size:", err);
-            }
-        });
-        
-        const remaining = Math.max(0, STORAGE_LIMIT - totalUsed);
-        const percentage = Math.round((totalUsed / STORAGE_LIMIT) * 100);
-        
-        return {
-            used: totalUsed,
-            limit: STORAGE_LIMIT,
-            remaining: remaining,
-            percentage: percentage
-        };
-    } catch (err) {
-        console.error("Error calculating storage stats:", err);
-        return { used: 0, limit: STORAGE_LIMIT, remaining: STORAGE_LIMIT, percentage: 0 };
-    }
-};
-
-// --- Request Parsing & Other Helpers ---
+// --- Request Parsing Helpers ---
 const parseBody = (req) => {
     return new Promise((resolve, reject) => {
         let body = '';
         req.on('data', chunk => {
-            if (body.length > 1e6) { 
-                req.connection.destroy();
+            if (body.length > 5e6) {
+                req.destroy();
                 reject(new Error("Payload too large"));
+                return;
             }
             body += chunk.toString();
         });
@@ -224,6 +146,7 @@ const parseBody = (req) => {
                 reject(err);
             }
         });
+        req.on('error', reject);
     });
 };
 
@@ -235,65 +158,32 @@ const getSessionEmail = (req) => {
         return sessions[match[1]];
     }
     return null;
-}
+};
 
-const parseMultipartData = (req, boundary) => {
+// Stream a raw request body directly to disk (used for video + poster uploads).
+const streamToDisk = (req, destPath, maxSize) => {
     return new Promise((resolve, reject) => {
-        const chunks = [];
-        let totalSize = 0;
-        
+        let size = 0;
+        const ws = fs.createWriteStream(destPath);
         req.on('data', chunk => {
-            totalSize += chunk.length;
-            if (totalSize > 50 * 1024 * 1024) {
-                req.connection.destroy();
+            size += chunk.length;
+            if (size > maxSize) {
+                req.destroy();
+                ws.destroy();
+                try { fs.unlinkSync(destPath); } catch (e) {}
                 reject(new Error("File too large"));
             }
-            chunks.push(chunk);
         });
-        
-        req.on('end', () => {
-            const buffer = Buffer.concat(chunks);
-            const boundaryBuffer = Buffer.from('--' + boundary);
-            
-            let parts = [];
-            let start = buffer.indexOf(boundaryBuffer);
-            
-            while (start !== -1) {
-                let next = buffer.indexOf(boundaryBuffer, start + boundaryBuffer.length);
-                if (next === -1) break;
-                
-                let part = buffer.slice(start + boundaryBuffer.length, next);
-                parts.push(part);
-                start = next;
-            }
-            
-            for (let part of parts) {
-                if (part.length > 2 && part[0] === 13 && part[1] === 10) {
-                    part = part.slice(2);
-                }
-                
-                const headerEnd = part.indexOf(Buffer.from('\r\n\r\n'));
-                if (headerEnd !== -1) {
-                    const headerString = part.slice(0, headerEnd).toString('utf8');
-                    const fileData = part.slice(headerEnd + 4, part.length - 2);
-                    
-                    const nameMatch = headerString.match(/name="([^"]+)"/);
-                    const filenameMatch = headerString.match(/filename="([^"]+)"/);
-                    const contentTypeMatch = headerString.match(/Content-Type:\s*(.+)/);
-                    
-                    if (nameMatch && filenameMatch) {
-                        resolve({
-                            filename: filenameMatch[1],
-                            contentType: contentTypeMatch ? contentTypeMatch[1].trim() : 'application/octet-stream',
-                            data: fileData
-                        });
-                        return;
-                    }
-                }
-            }
-            reject(new Error("No file found in multipart form data"));
+        ws.on('error', err => {
+            try { fs.unlinkSync(destPath); } catch (e) {}
+            reject(err);
         });
-        req.on('error', reject);
+        ws.on('finish', () => resolve(size));
+        req.on('error', err => {
+            try { fs.unlinkSync(destPath); } catch (e) {}
+            reject(err);
+        });
+        req.pipe(ws);
     });
 };
 
@@ -305,33 +195,55 @@ const mimeTypes = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
     '.json': 'application/json',
     '.mp4': 'video/mp4',
     '.webm': 'video/webm',
     '.ogg': 'video/ogg',
+    '.ogv': 'video/ogg',
     '.mov': 'video/quicktime',
+    '.mkv': 'video/x-matroska',
     '.mp3': 'audio/mpeg',
     '.wav': 'audio/wav',
     '.pdf': 'application/pdf'
 };
 
-// --- Server Creation ---
+// --- Movie helpers ---
+const publicMovie = (m, origin) => {
+    const base = origin || '';
+    return {
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        genre: m.genre,
+        year: m.year,
+        duration: m.duration || null,
+        uploadDate: m.uploadDate,
+        views: m.views || 0,
+        posterUrl: m.posterFile ? `${base}/poster/${m.posterFile}` : null,
+        streamUrl: `${base}/stream/${m.streamToken}`,
+        embedUrl: `${base}/embed/${m.streamToken}`
+    };
+};
+
+// ============================================
+// SERVER
+// ============================================
 const server = http.createServer(async (req, res) => {
     const urlPath = req.url.split('?')[0];
     const pathName = urlPath.replace(/\/+$/, '').replace(/\/+/g, '/') || '/';
     const method = req.method.toUpperCase();
 
-    // CORS Headers
+    // CORS
     const origin = req.headers.origin;
-    const allowedOrigins = [...FRONTEND_URLS, 'https://seleman-lab.github.io/Mystore'];
-    
+    const allowedOrigins = [...FRONTEND_URLS, 'https://seleman-lab.github.io', 'https://seleman-lab.github.io/Mystore'];
     if (allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     } else {
         res.setHeader('Access-Control-Allow-Origin', '*');
     }
-    
-    res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST, GET, PUT');
+    res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST, GET, PUT, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
 
@@ -341,16 +253,64 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    // Logic remaining same...
-    // (Ensure you have all the routes defined in your original file here)
-    // NOTE: Keep all other route handlers unchanged.
-    
-    // Example call for verification (inside /verify-security-questions):
-    // sendOTPToUserEmail(email, otp);
 
-<<<<<<< HEAD
-    // ... (All other route handlers omitted for brevity, ensure they remain intact)
-=======
+    // =================== AUTH ===================
+    if (method === 'POST' && pathName === '/signup') {
+        try {
+            const body = await parseBody(req);
+            let { name, email, phone, password, securityQuestions } = body;
+
+            if (!name || !email || !phone || !password) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "All fields are required" }));
+            }
+            email = email.trim().toLowerCase();
+            if (!isValidEmail(email)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Invalid email address" }));
+            }
+            if (password.length < 8) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Password must be at least 8 characters" }));
+            }
+
+            const users = readJSON(USERS_FILE);
+            if (users.some(u => u.email === email)) {
+                res.writeHead(409, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "An account with this email already exists" }));
+            }
+
+            const { salt, hash } = hashPassword(password);
+            const newUser = {
+                id: crypto.randomUUID(),
+                name: escapeHTML(name),
+                email,
+                phone: escapeHTML(phone),
+                salt,
+                hash,
+                themePreference: 'light',
+                securityQuestions: Array.isArray(securityQuestions) && securityQuestions.length === 3
+                    ? securityQuestions.map(q => ({ question: escapeHTML(q.question), answer: escapeHTML(q.answer.trim().toLowerCase()) }))
+                    : [],
+                createdAt: new Date()
+            };
+            users.push(newUser);
+            writeJSON(USERS_FILE, users);
+
+            res.writeHead(201, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: "Account created successfully" }));
+        } catch (error) {
+            console.error(error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Internal Server Error" }));
+        }
+    }
+
+    else if (method === 'POST' && pathName === '/login') {
+        try {
+            const body = await parseBody(req);
+            let { email, password } = body;
+
             if (!email || !password) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Email and password are required" }));
@@ -367,68 +327,50 @@ const server = http.createServer(async (req, res) => {
 
             const sessionId = crypto.randomUUID();
             sessions[sessionId] = user.email;
-            
-            res.setHeader('Set-Cookie', `sessionId=${sessionId}; HttpOnly; Path=/; Max-Age=3600; SameSite=None; Secure`);
+            const isSecure = req.headers['x-forwarded-proto'] === 'https';
+            const sameSite = isSecure ? 'None' : 'Lax';
+            const secureAttr = isSecure ? '; Secure' : '';
+            res.setHeader('Set-Cookie', `sessionId=${sessionId}; HttpOnly; Path=/; Max-Age=3600; SameSite=${sameSite}${secureAttr}`);
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ 
-                message: "Login successful", 
-                user: { id: user.id, name: user.name, email: user.email, theme: user.themePreference } 
+            res.end(JSON.stringify({
+                message: "Login successful",
+                user: { id: user.id, name: user.name, email: user.email, theme: user.themePreference }
             }));
         } catch (error) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
         }
-    } 
-    
-    else if (method === 'POST' && pathName === '/verify-security-questions') {
+    }
+
+    else if (method === 'POST' && pathName === '/logout') {
+        const cookieHeader = req.headers.cookie || '';
+        const match = cookieHeader.match(/sessionId=([^;]+)/);
+        if (match && sessions[match[1]]) delete sessions[match[1]];
+        const isSecure = req.headers['x-forwarded-proto'] === 'https';
+        const sameSite = isSecure ? 'None' : 'Lax';
+        const secureAttr = isSecure ? '; Secure' : '';
+        res.setHeader('Set-Cookie', `sessionId=; HttpOnly; Path=/; Max-Age=0; SameSite=${sameSite}${secureAttr}`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: "Logged out" }));
+    }
+
+    else if (method === 'POST' && pathName === '/get-security-questions') {
         try {
             const body = await parseBody(req);
-            let { email, answers } = body;
-            
-            if (!email || !answers || answers.length !== 3) {
+            let { email } = body;
+            if (!email) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Email and all 3 security answers are required" }));
+                return res.end(JSON.stringify({ error: "Email is required" }));
             }
             email = email.trim().toLowerCase();
-
             const users = readJSON(USERS_FILE);
             const user = users.find(u => u.email === email);
-
-            if (!user || !user.securityQuestions) {
+            if (!user || !user.securityQuestions || user.securityQuestions.length !== 3) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "User not found or no security questions set" }));
             }
-
-            // Compare answers (case-insensitive)
-            const sanitizedAnswers = answers.map(a => escapeHTML(a.trim().toLowerCase()));
-            let correctCount = 0;
-
-            for (let i = 0; i < user.securityQuestions.length; i++) {
-                if (user.securityQuestions[i].answer === sanitizedAnswers[i]) {
-                    correctCount++;
-                }
-            }
-
-            // Require 3 out of 3 correct answers
-            if (correctCount !== 3) {
-                res.writeHead(401, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Incorrect security answers" }));
-            }
-
-            // Answers verified - generate OTP and send to USER's EMAIL
-            const otp = generateOTP();
-            const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-            const otpData = readJSON(OTP_FILE);
-            const filtered = otpData.filter(o => o.email !== email);
-            filtered.push({ email, otp, expires });
-            writeJSON(OTP_FILE, filtered);
-
-            console.log(`\n--- PASSWORD RESET OTP FOR ${email} ---\nOTP: ${otp}\n--- SENDING TO USER EMAIL ---\n------------------------------------------\n`);
-            sendOTPToUserEmail(email, otp);
-
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: "✅ Security questions verified! Check your email for the OTP code." }));
+            res.end(JSON.stringify({ questions: user.securityQuestions.map(sq => sq.question) }));
         } catch (error) {
             console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -436,30 +378,44 @@ const server = http.createServer(async (req, res) => {
         }
     }
 
-    else if (method === 'POST' && pathName === '/get-security-questions') {
+    else if (method === 'POST' && pathName === '/verify-security-questions') {
         try {
             const body = await parseBody(req);
-            let { email } = body;
-            
-            if (!email) {
+            let { email, answers } = body;
+            if (!email || !answers || answers.length !== 3) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Email is required" }));
+                return res.end(JSON.stringify({ error: "Email and all 3 security answers are required" }));
             }
             email = email.trim().toLowerCase();
-
             const users = readJSON(USERS_FILE);
             const user = users.find(u => u.email === email);
-
             if (!user || !user.securityQuestions) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "User not found or no security questions set" }));
             }
 
-            // Return only questions, not answers
-            const questions = user.securityQuestions.map(sq => sq.question);
-            
+            const sanitized = answers.map(a => escapeHTML((a || '').trim().toLowerCase()));
+            let correctCount = 0;
+            for (let i = 0; i < user.securityQuestions.length; i++) {
+                if (user.securityQuestions[i].answer === sanitized[i]) correctCount++;
+            }
+            if (correctCount !== 3) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Incorrect security answers" }));
+            }
+
+            const otp = generateOTP();
+            const expires = Date.now() + 10 * 60 * 1000;
+            const otpData = readJSON(OTP_FILE);
+            const filtered = otpData.filter(o => o.email !== email);
+            filtered.push({ email, otp, expires });
+            writeJSON(OTP_FILE, filtered);
+
+            console.log(`\n--- PASSWORD RESET OTP FOR ${email} ---\nOTP: ${otp}\n---`); 
+            sendOTPToUserEmail(email, otp);
+
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ questions }));
+            res.end(JSON.stringify({ message: "Security questions verified! Check your email for the OTP code." }));
         } catch (error) {
             console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -471,7 +427,6 @@ const server = http.createServer(async (req, res) => {
         try {
             const body = await parseBody(req);
             const { email, otp } = body;
-
             if (!email || !otp) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Email and OTP are required" }));
@@ -479,44 +434,27 @@ const server = http.createServer(async (req, res) => {
 
             const otpData = readJSON(OTP_FILE);
             const otpRecord = otpData.find(o => o.email === email.trim().toLowerCase());
-
             if (!otpRecord) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Invalid email or OTP not requested" }));
             }
-
             if (Date.now() > otpRecord.expires) {
-                // Remove expired OTP
-                const filtered = otpData.filter(o => o.email !== email.trim().toLowerCase());
-                writeJSON(OTP_FILE, filtered);
-                
+                writeJSON(OTP_FILE, otpData.filter(o => o.email !== email.trim().toLowerCase()));
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "OTP has expired. Please request a new one." }));
             }
-
             if (otpRecord.otp !== otp.trim()) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Invalid OTP" }));
             }
 
-            // OTP verified - generate a temporary token for password reset
             const resetToken = crypto.randomUUID();
-            const tokenData = {
-                email: email.trim().toLowerCase(),
-                token: resetToken,
-                verified: true,
-                expires: Date.now() + 15 * 60 * 1000 // 15 minutes
-            };
-
             const tokens = readJSON(TOKENS_FILE);
-            tokens.push(tokenData);
+            tokens.push({ email: email.trim().toLowerCase(), token: resetToken, verified: true, expires: Date.now() + 15 * 60 * 1000 });
             writeJSON(TOKENS_FILE, tokens);
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ 
-                message: "OTP verified successfully",
-                resetToken: resetToken
-            }));
+            res.end(JSON.stringify({ message: "OTP verified successfully", resetToken }));
         } catch (error) {
             console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -528,16 +466,13 @@ const server = http.createServer(async (req, res) => {
         try {
             const body = await parseBody(req);
             let { email } = body;
-
             if (!email) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Email is required" }));
             }
             email = email.trim().toLowerCase();
-
             const users = readJSON(USERS_FILE);
             const user = users.find(u => u.email === email);
-
             if (!user) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "User not found" }));
@@ -545,13 +480,12 @@ const server = http.createServer(async (req, res) => {
 
             const otp = generateOTP();
             const expires = Date.now() + 10 * 60 * 1000;
-
             const otpData = readJSON(OTP_FILE);
             const filtered = otpData.filter(o => o.email !== email);
             filtered.push({ email, otp, expires });
             writeJSON(OTP_FILE, filtered);
 
-            console.log(`\n--- RESEND OTP FOR ${email} ---\nOTP: ${otp}\n---\n`);
+            console.log(`\n--- RESEND OTP FOR ${email} ---\nOTP: ${otp}\n---`);
             sendOTPToUserEmail(email, otp);
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -567,62 +501,56 @@ const server = http.createServer(async (req, res) => {
         try {
             const body = await parseBody(req);
             const { resetToken, newPassword } = body;
-
             if (!resetToken || !newPassword || newPassword.length < 8) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Invalid token or password does not meet requirements (min 8 characters)" }));
+                return res.end(JSON.stringify({ error: "Invalid token or password must be at least 8 characters" }));
             }
 
             const tokens = readJSON(TOKENS_FILE);
             const tokenIndex = tokens.findIndex(t => t.token === resetToken && t.verified);
-
             if (tokenIndex === -1) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Invalid reset token" }));
             }
-
             const tokenData = tokens[tokenIndex];
-
             if (Date.now() > tokenData.expires) {
                 tokens.splice(tokenIndex, 1);
                 writeJSON(TOKENS_FILE, tokens);
-                
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Reset token has expired" }));
             }
 
             const users = readJSON(USERS_FILE);
             const userIndex = users.findIndex(u => u.email === tokenData.email);
-
             if (userIndex !== -1) {
                 const { salt, hash } = hashPassword(newPassword);
                 users[userIndex].salt = salt;
                 users[userIndex].hash = hash;
                 writeJSON(USERS_FILE, users);
-
                 console.log(`Password reset for user: ${tokenData.email}`);
             }
 
-            // Invalidate token after use
             tokens.splice(tokenIndex, 1);
-            writeJSON(TOKENS_FILE, tokens);
+            // clean up stale tokens
+            const now = Date.now();
+            const cleanTokens = tokens.filter(t => t.expires > now);
+            writeJSON(TOKENS_FILE, cleanTokens);
 
-            // Clean up OTP data for this email
             const otpData = readJSON(OTP_FILE);
-            const filtered = otpData.filter(o => o.email !== tokenData.email);
-            writeJSON(OTP_FILE, filtered);
+            writeJSON(OTP_FILE, otpData.filter(o => o.email !== tokenData.email));
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: "✅ Password has been successfully reset! You can now log in." }));
-            
+            res.end(JSON.stringify({ message: "Password has been successfully reset! You can now log in." }));
         } catch (error) {
             console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
         }
     }
-    
-    else if (method === 'POST' && pathName === '/upload') {
+
+
+    // =================== MOVIE UPLOADS ===================
+    else if (method === 'POST' && pathName === '/upload/video') {
         try {
             const email = getSessionEmail(req);
             if (!email) {
@@ -630,52 +558,60 @@ const server = http.createServer(async (req, res) => {
                 return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
             }
 
-            const contentType = req.headers['content-type'] || '';
-            if (!contentType.includes('multipart/form-data')) {
+            const rawName = req.headers['x-file-name'] || 'video.mp4';
+            const safeName = path.basename(rawName);
+            const ext = path.extname(safeName).toLowerCase() || '.mp4';
+            if (!['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.mkv'].includes(ext)) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Content-Type must be multipart/form-data" }));
+                return res.end(JSON.stringify({ error: "Unsupported video format. Use MP4, WebM, OGG, MOV or MKV." }));
             }
 
-            const boundaryMatch = contentType.match(/boundary=([^;\s]+)/);
-            if (!boundaryMatch) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "No boundary found in Content-Type" }));
-            }
-            
-            let boundary = boundaryMatch[1].replace(/^"|"$/g, '');
-            const fileObj = await parseMultipartData(req, boundary);
-            
-            const ext = path.extname(fileObj.filename) || '';
             const uniqueFilename = crypto.randomUUID() + ext;
-            const filePath = path.join(UPLOADS_DIR, uniqueFilename);
-            
-            fs.writeFileSync(filePath, fileObj.data);
-            
-            const filesData = readJSON(FILES_META);
-            const newFileMeta = {
-                filename: uniqueFilename,
-                originalName: escapeHTML(fileObj.filename),
-                userEmail: email,
-                mimeType: escapeHTML(fileObj.contentType),
-                uploadDate: new Date(),
-                embedToken: crypto.randomBytes(32).toString('hex'),
-                embedTokenCreated: Date.now()
-            };
-            
-            filesData.push(newFileMeta);
-            writeJSON(FILES_META, filesData);
-            
+            const destPath = path.join(MOVIES_DIR, uniqueFilename);
+
+            await streamToDisk(req, destPath, MAX_VIDEO_SIZE);
+
             res.writeHead(201, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: "File uploaded successfully", file: newFileMeta }));
-
+            res.end(JSON.stringify({ message: "Video uploaded", videoFile: uniqueFilename }));
         } catch (error) {
-            console.error("Upload error:", error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: "Internal Server Error or invalid multipart data" }));
+            console.error("Video upload error:", error);
+            res.writeHead(413, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: error.message || "Upload failed" }));
         }
     }
-    
-    else if (method === 'POST' && pathName === '/delete-file') {
+
+    else if (method === 'POST' && pathName === '/upload/poster') {
+        try {
+            const email = getSessionEmail(req);
+            if (!email) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
+            }
+
+            const rawName = req.headers['x-file-name'] || 'poster.png';
+            const safeName = path.basename(rawName);
+            const ext = path.extname(safeName).toLowerCase() || '.png';
+            if (!['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Unsupported image format. Use PNG, JPG, GIF or WEBP." }));
+            }
+
+            const uniqueFilename = 'poster_' + crypto.randomUUID() + ext;
+            const destPath = path.join(MOVIES_DIR, uniqueFilename);
+
+            const size = await streamToDisk(req, destPath, MAX_POSTER_SIZE);
+
+            res.writeHead(201, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: "Poster uploaded", posterFile: uniqueFilename, posterUrl: `/poster/${uniqueFilename}`, size }));
+        } catch (error) {
+            console.error("Poster upload error:", error);
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: error.message || "Upload failed" }));
+        }
+    }
+
+    // =================== MOVIE CRUD ===================
+    else if (method === 'POST' && pathName === '/movie') {
         try {
             const email = getSessionEmail(req);
             if (!email) {
@@ -684,45 +620,48 @@ const server = http.createServer(async (req, res) => {
             }
 
             const body = await parseBody(req);
-            const { filename } = body;
+            const { title, description, genre, year, videoFile, posterFile } = body;
 
-            if (!filename) {
+            if (!title || !videoFile) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Filename is required" }));
+                return res.end(JSON.stringify({ error: "Title and video file are required" }));
             }
 
-            // Sanitize filename to prevent path traversal
-            const safeFilename = path.basename(filename);
-
-            // Verify file ownership
-            const filesData = readJSON(FILES_META);
-            const fileIndex = filesData.findIndex(f => f.filename === safeFilename && f.userEmail && f.userEmail.toLowerCase() === email.toLowerCase());
-
-            if (fileIndex === -1) {
-                res.writeHead(403, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "File not found or unauthorized" }));
+            const safeVideo = path.basename(videoFile);
+            const videoAbs = path.join(MOVIES_DIR, safeVideo);
+            if (!fs.existsSync(videoAbs)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Video file was not found on server" }));
             }
 
-            // Delete physical file
-            const filePath = path.join(UPLOADS_DIR, safeFilename);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
+            const movie = {
+                id: crypto.randomUUID(),
+                title: escapeHTML(title),
+                description: escapeHTML(description || ''),
+                genre: escapeHTML(genre || 'Other'),
+                year: year ? parseInt(year, 10) || null : null,
+                videoFile: safeVideo,
+                posterFile: posterFile ? path.basename(posterFile) : null,
+                userEmail: email,
+                uploadDate: new Date().toISOString(),
+                views: 0,
+                streamToken: crypto.randomBytes(24).toString('hex')
+            };
 
-            // Remove from metadata
-            filesData.splice(fileIndex, 1);
-            writeJSON(FILES_META, filesData);
+            const movies = readJSON(MOVIES_FILE);
+            movies.push(movie);
+            writeJSON(MOVIES_FILE, movies);
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: "File deleted successfully" }));
+            res.writeHead(201, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: "Movie published", movie: publicMovie(movie, `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`) }));
         } catch (error) {
-            console.error("Delete error:", error);
+            console.error("Save movie error:", error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
         }
     }
 
-    else if (method === 'POST' && pathName === '/generate-embed-link') {
+    else if (method === 'GET' && pathName === '/movies') {
         try {
             const email = getSessionEmail(req);
             if (!email) {
@@ -730,44 +669,50 @@ const server = http.createServer(async (req, res) => {
                 return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
             }
 
-            const body = await parseBody(req);
-            const { filename } = body;
-
-            if (!filename) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Filename is required" }));
-            }
-
-            const safeFilename = path.basename(filename);
-
-            // Verify file ownership
-            const filesData = readJSON(FILES_META);
-            const fileMeta = filesData.find(f => f.filename === safeFilename && f.userEmail && f.userEmail.toLowerCase() === email.toLowerCase());
-
-            if (!fileMeta) {
-                res.writeHead(403, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "File not found or unauthorized" }));
-            }
-
-            // Generate unique embed token
-            const embedToken = crypto.randomBytes(32).toString('hex');
-            fileMeta.embedToken = embedToken;
-            fileMeta.embedTokenCreated = Date.now();
-            writeJSON(FILES_META, filesData);
-
-            const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-            const embedUrl = `${protocol}://${req.headers.host}/embed/${embedToken}`;
+            const origin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+            const movies = readJSON(MOVIES_FILE)
+                .filter(m => m.userEmail && m.userEmail.toLowerCase() === email.toLowerCase())
+                .map(m => publicMovie(m, origin))
+                .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ embedUrl }));
+            res.end(JSON.stringify(movies));
         } catch (error) {
-            console.error("Embed link error:", error);
+            console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
         }
     }
 
-    else if (method === 'POST' && pathName === '/generate-share-link') {
+    else if (method === 'GET' && pathName.startsWith('/movie/')) {
+        try {
+            const id = pathName.split('/')[2];
+            const origin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+            const movies = readJSON(MOVIES_FILE);
+            const movie = movies.find(m => m.id === id);
+            if (!movie) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Movie not found" }));
+            }
+
+            const email = getSessionEmail(req);
+            // owner + public token access allowed
+            const isOwner = movie.userEmail && email && movie.userEmail.toLowerCase() === email.toLowerCase();
+            if (!isOwner) {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "You do not have access to this movie" }));
+            }
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(publicMovie(movie, origin)));
+        } catch (error) {
+            console.error(error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Internal Server Error" }));
+        }
+    }
+
+    else if (method === 'DELETE' && pathName.startsWith('/movie/')) {
         try {
             const email = getSessionEmail(req);
             if (!email) {
@@ -775,65 +720,52 @@ const server = http.createServer(async (req, res) => {
                 return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
             }
 
-            const body = await parseBody(req);
-            const { filename } = body;
-
-            if (!filename) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Filename is required" }));
+            const id = pathName.split('/')[2];
+            const movies = readJSON(MOVIES_FILE);
+            const idx = movies.findIndex(m => m.id === id && m.userEmail && m.userEmail.toLowerCase() === email.toLowerCase());
+            if (idx === -1) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Movie not found or not yours" }));
             }
 
-            const safeFilename = path.basename(filename);
+            const [movie] = movies.splice(idx, 1);
+            writeJSON(MOVIES_FILE, movies);
 
-            // Verify file ownership
-            const filesData = readJSON(FILES_META);
-            const fileMeta = filesData.find(f => f.filename === safeFilename && f.userEmail && f.userEmail.toLowerCase() === email.toLowerCase());
-
-            if (!fileMeta) {
-                res.writeHead(403, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "File not found or unauthorized" }));
+            for (const f of [movie.videoFile, movie.posterFile]) {
+                if (f) {
+                    const fp = path.join(MOVIES_DIR, path.basename(f));
+                    if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
+                }
             }
-
-            // Generate unique share token
-            const shareToken = crypto.randomBytes(32).toString('hex');
-            fileMeta.shareToken = shareToken;
-            fileMeta.shareTokenCreated = Date.now();
-            writeJSON(FILES_META, filesData);
-
-            const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-            const shareUrl = `${protocol}://${req.headers.host}/share/${shareToken}`;
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ shareUrl }));
+            res.end(JSON.stringify({ message: "Movie deleted", title: movie.title }));
         } catch (error) {
-            console.error("Share link error:", error);
+            console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
         }
     }
 
-    else if (method === 'GET' && pathName.startsWith('/embed/')) {
+    // =================== STREAMING & POSTERS ===================
+    else if (method === 'GET' && pathName.startsWith('/stream/')) {
         try {
-            const embedToken = req.url.split('/')[2]?.split('?')[0];
-            
-            const filesData = readJSON(FILES_META);
-            const fileMeta = filesData.find(f => f.embedToken === embedToken);
-
-            if (!fileMeta) {
-                res.writeHead(404, { 'Content-Type': 'text/html' });
-                return res.end('<h1>404 - Embed not found</h1>');
+            const token = pathName.split('/')[2]?.split('?')[0];
+            const movies = readJSON(MOVIES_FILE);
+            const movie = movies.find(m => m.streamToken === token);
+            if (!movie) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Movie not found" }));
             }
 
-            const filePath = path.join(UPLOADS_DIR, fileMeta.filename);
-            
+            const filePath = path.join(MOVIES_DIR, movie.videoFile);
             if (!fs.existsSync(filePath)) {
-                res.writeHead(404, { 'Content-Type': 'text/html' });
-                return res.end('<h1>404 - File not found</h1>');
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Video file missing on server" }));
             }
 
-            const extname = String(path.extname(filePath)).toLowerCase();
-            const contentType = mimeTypes[extname] || 'application/octet-stream';
-
+            const extname = path.extname(filePath).toLowerCase();
+            const contentType = mimeTypes[extname] || 'video/mp4';
             const stats = fs.statSync(filePath);
             const range = req.headers.range;
 
@@ -842,173 +774,73 @@ const server = http.createServer(async (req, res) => {
                 const start = parseInt(parts[0], 10);
                 const end = parts[1] ? parseInt(parts[1], 10) : stats.size - 1;
                 const chunksize = (end - start) + 1;
-                const file = fs.createReadStream(filePath, { start, end });
                 res.writeHead(206, {
                     'Content-Range': `bytes ${start}-${end}/${stats.size}`,
                     'Accept-Ranges': 'bytes',
                     'Content-Length': chunksize,
-                    'Content-Type': contentType,
+                    'Content-Type': contentType
                 });
-                file.pipe(res);
+                fs.createReadStream(filePath, { start, end }).pipe(res);
             } else {
                 res.writeHead(200, {
                     'Content-Length': stats.size,
                     'Content-Type': contentType,
-                    'Accept-Ranges': 'bytes',
+                    'Accept-Ranges': 'bytes'
                 });
                 fs.createReadStream(filePath).pipe(res);
             }
+
+            // increment view count
+            const moviesUpdated = readJSON(MOVIES_FILE);
+            const m = moviesUpdated.find(x => x.streamToken === token);
+            if (m) {
+                m.views = (m.views || 0) + 1;
+                writeJSON(MOVIES_FILE, moviesUpdated);
+            }
         } catch (error) {
-            console.error("Embed error:", error);
-            res.writeHead(500, { 'Content-Type': 'text/html' });
-            res.end('<h1>500 - Server Error</h1>');
-        }
-    }
-
-    else if (method === 'GET' && pathName.startsWith('/share/')) {
-        try {
-            const shareToken = req.url.split('/')[2]?.split('?')[0];
-            
-            const filesData = readJSON(FILES_META);
-            const fileMeta = filesData.find(f => f.shareToken === shareToken);
-
-            if (!fileMeta) {
-                res.writeHead(404, { 'Content-Type': 'text/html' });
-                return res.end('<h1>404 - Share link not found</h1>');
-            }
-
-            const filePath = path.join(UPLOADS_DIR, fileMeta.filename);
-            
-            if (!fs.existsSync(filePath)) {
-                res.writeHead(404, { 'Content-Type': 'text/html' });
-                return res.end('<h1>404 - File not found</h1>');
-            }
-
-            const extname = String(path.extname(filePath)).toLowerCase();
-            const contentType = mimeTypes[extname] || 'application/octet-stream';
-
-            res.writeHead(200, {
-                'Content-Type': contentType,
-                'Content-Disposition': `attachment; filename="${fileMeta.originalName}"`
-            });
-
-            const readStream = fs.createReadStream(filePath);
-            readStream.pipe(res);
-            
-            readStream.on('error', (err) => {
-                console.error("Stream error:", err);
-                if (!res.headersSent) {
-                    res.writeHead(500);
-                    res.end("Stream error");
-                }
-            });
-        } catch (error) {
-            console.error("Share error:", error);
-            res.writeHead(500, { 'Content-Type': 'text/html' });
-            res.end('<h1>500 - Server Error</h1>');
-        }
-    }
-
-    else if (method === 'GET' && pathName === '/files') {
-        try {
-            const email = getSessionEmail(req);
-            if (!email) {
-                res.writeHead(401, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
-            }
-
-            const filesData = readJSON(FILES_META);
-            const userFiles = filesData.filter(f => f.userEmail.toLowerCase() === email.toLowerCase());
-            
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(userFiles));
-        } catch (error) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: "Internal Server Error" }));
-        }
-    }
-
-    else if (method === 'GET' && pathName.startsWith('/download')) {
-        try {
-            // 1. Authenticate user
-            const email = getSessionEmail(req);
-            if (!email) {
-                res.writeHead(401, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
-            }
-
-            // 2. Extract filename from query parameter
-            const urlObj = new URL(req.url, `http://${req.headers.host}`);
-            const queryFile = urlObj.searchParams.get('file');
-
-            if (!queryFile) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "No file specified." }));
-            }
-
-            // 3. Sanitize filename to prevent path traversal
-            const safeFilename = path.basename(queryFile);
-
-            // 4. Verify ownership
-            const filesData = readJSON(FILES_META);
-            const fileMeta = filesData.find(f => f.filename === safeFilename && f.userEmail && f.userEmail.toLowerCase() === email.toLowerCase());
-
-            if (!fileMeta) {
-                res.writeHead(403, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Forbidden or file not found." }));
-            }
-
-            const absoluteFilePath = path.join(UPLOADS_DIR, safeFilename);
-
-            // 5. Ensure physical file exists
-            if (!fs.existsSync(absoluteFilePath)) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Physical file missing on server." }));
-            }
-
-            // 6. Set appropriate headers
-            const extname = String(path.extname(absoluteFilePath)).toLowerCase();
-            const contentType = mimeTypes[extname] || 'application/octet-stream';
-            
-            res.writeHead(200, {
-                'Content-Type': contentType,
-                'Content-Disposition': `attachment; filename="${fileMeta.originalName}"`
-            });
-
-            // 7. Stream file to client
-            const readStream = fs.createReadStream(absoluteFilePath);
-            readStream.pipe(res);
-            
-            readStream.on('error', (err) => {
-                console.error("Stream error:", err);
-                if (!res.headersSent) {
-                    res.writeHead(500);
-                    res.end("Stream error");
-                }
-            });
-
-        } catch (error) {
-            console.error("Download error:", error);
+            console.error("Stream error:", error);
             if (!res.headersSent) {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: "Internal Server Error" }));
+                res.writeHead(500, { 'Content-Type': 'text/plain' });
+                res.end("Streaming error");
             }
         }
     }
-    
-    else if (method === 'GET' && pathName === '/settings') {
+
+    else if (method === 'GET' && pathName.startsWith('/poster/')) {
+        try {
+            const file = path.basename(pathName.split('/')[2]?.split('?')[0] || '');
+            const filePath = path.join(MOVIES_DIR, file);
+            if (!file || !fs.existsSync(filePath)) {
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                return res.end("Poster not found");
+            }
+            const extname = path.extname(filePath).toLowerCase();
+            const contentType = mimeTypes[extname] || 'image/png';
+            res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=86400' });
+            fs.createReadStream(filePath).pipe(res);
+        } catch (error) {
+            console.error("Poster error:", error);
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end("Poster error");
+        }
+    }
+
+    // =================== SETTINGS / PROFILE ===================
+    else if (method === 'GET' && pathName === '/get-profile') {
         try {
             const email = getSessionEmail(req);
             if (!email) {
                 res.writeHead(401, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
             }
-
             const users = readJSON(USERS_FILE);
             const user = users.find(u => u.email === email);
-            
+            if (!user) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "User not found" }));
+            }
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ theme: user?.themePreference || 'light' }));
+            res.end(JSON.stringify({ name: user.name, email: user.email, phone: user.phone, theme: user.themePreference || 'light' }));
         } catch (error) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
@@ -1022,30 +854,21 @@ const server = http.createServer(async (req, res) => {
                 res.writeHead(401, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
             }
-
             const body = await parseBody(req);
             let { name, phone } = body;
-
             const users = readJSON(USERS_FILE);
             const userIndex = users.findIndex(u => u.email === email);
-
             if (userIndex === -1) {
                 res.writeHead(404, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "User not found" }));
             }
-
             if (name) users[userIndex].name = escapeHTML(name);
             if (phone) users[userIndex].phone = escapeHTML(phone);
-
             writeJSON(USERS_FILE, users);
-
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-                message: "Profile updated successfully",
-                user: { name: users[userIndex].name, email: users[userIndex].email, phone: users[userIndex].phone }
-            }));
+            res.end(JSON.stringify({ message: "Profile updated successfully", user: { name: users[userIndex].name, email: users[userIndex].email, phone: users[userIndex].phone } }));
         } catch (error) {
-            console.error("Update profile error:", error);
+            console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
         }
@@ -1058,72 +881,35 @@ const server = http.createServer(async (req, res) => {
                 res.writeHead(401, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
             }
-
             const body = await parseBody(req);
             const { currentPassword, newPassword } = body;
-
             if (!currentPassword || !newPassword) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Current password and new password are required" }));
             }
-
             if (newPassword.length < 8) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "New password must be at least 8 characters" }));
             }
-
             const users = readJSON(USERS_FILE);
             const userIndex = users.findIndex(u => u.email === email);
-
             if (userIndex === -1) {
                 res.writeHead(404, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "User not found" }));
             }
-
             const user = users[userIndex];
             if (!verifyPassword(currentPassword, user.hash, user.salt)) {
                 res.writeHead(401, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Current password is incorrect" }));
             }
-
             const { salt, hash } = hashPassword(newPassword);
             users[userIndex].salt = salt;
             users[userIndex].hash = hash;
             writeJSON(USERS_FILE, users);
-
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ message: "Password changed successfully" }));
         } catch (error) {
-            console.error("Change password error:", error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: "Internal Server Error" }));
-        }
-    }
-
-    else if (method === 'GET' && pathName === '/get-profile') {
-        try {
-            const email = getSessionEmail(req);
-            if (!email) {
-                res.writeHead(401, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
-            }
-
-            const users = readJSON(USERS_FILE);
-            const user = users.find(u => u.email === email);
-
-            if (!user) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "User not found" }));
-            }
-
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-                name: user.name,
-                email: user.email,
-                phone: user.phone,
-                theme: user.themePreference || 'light'
-            }));
-        } catch (error) {
+            console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
         }
@@ -1136,22 +922,18 @@ const server = http.createServer(async (req, res) => {
                 res.writeHead(401, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
             }
-            
             const body = await parseBody(req);
             let { theme } = body;
-            
             if (theme !== 'dark' && theme !== 'light') {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Invalid theme setting." }));
             }
-
             const users = readJSON(USERS_FILE);
             const userIndex = users.findIndex(u => u.email === email);
             if (userIndex !== -1) {
                 users[userIndex].themePreference = theme;
                 writeJSON(USERS_FILE, users);
             }
-
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ message: "Settings updated successfully", theme }));
         } catch (error) {
@@ -1159,7 +941,7 @@ const server = http.createServer(async (req, res) => {
             res.end(JSON.stringify({ error: "Internal Server Error" }));
         }
     }
-    
+
     else if (method === 'GET' && pathName === '/storage-stats') {
         try {
             const email = getSessionEmail(req);
@@ -1168,23 +950,67 @@ const server = http.createServer(async (req, res) => {
                 return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
             }
 
-            const stats = getStorageStats(email);
-            
+            const movies = readJSON(MOVIES_FILE).filter(m => m.userEmail && m.userEmail.toLowerCase() === email.toLowerCase());
+            let totalUsed = 0;
+            for (const m of movies) {
+                const fp = path.join(MOVIES_DIR, m.videoFile);
+                if (fs.existsSync(fp)) totalUsed += fs.statSync(fp).size;
+                if (m.posterFile) {
+                    const pp = path.join(MOVIES_DIR, m.posterFile);
+                    if (fs.existsSync(pp)) totalUsed += fs.statSync(pp).size;
+                }
+            }
+            const remaining = Math.max(0, STORAGE_LIMIT - totalUsed);
+            const percentage = Math.min(100, Math.round((totalUsed / STORAGE_LIMIT) * 100));
+
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(stats));
+            res.end(JSON.stringify({ used: totalUsed, limit: STORAGE_LIMIT, remaining, percentage }));
         } catch (error) {
-            console.error("Storage stats error:", error);
+            console.error(error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: "Internal Server Error" }));
         }
     }
-    
+
+    // =================== EMBED PAGE ===================
+    else if (method === 'GET' && pathName.startsWith('/embed/')) {
+        try {
+            const token = pathName.split('/')[2]?.split('?')[0];
+            const movies = readJSON(MOVIES_FILE);
+            const movie = movies.find(m => m.streamToken === token);
+            if (!movie) {
+                res.writeHead(404, { 'Content-Type': 'text/html' });
+                return res.end('<h1 style="font-family:sans-serif;padding:2rem;color:#fff;background:#111;">404 - Embed not found</h1>');
+            }
+            const embedPath = path.join(__dirname, 'embed.html');
+            fs.readFile(embedPath, 'utf8', (err, html) => {
+                if (err) {
+                    res.writeHead(500);
+                    return res.end('Embed page error');
+                }
+                const origin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+                const title = (movie.title || 'MyStore video').replace(/"/g, '&quot;');
+                html = html
+                    .replace(/__STREAM_URL__/g, `${origin}/stream/${token}`)
+                    .replace(/__POSTER_URL__/g, movie.posterFile ? `${origin}/poster/${movie.posterFile}` : '')
+                    .replace(/__TITLE__/g, title)
+                    .replace(/__LINK__/g, `${origin}/watch.html?id=${movie.id}`);
+                res.writeHead(200, { 'Content-Type': 'text/html' });
+                res.end(html);
+            });
+        } catch (error) {
+            console.error("Embed route error:", error);
+            res.writeHead(500, { 'Content-Type': 'text/html' });
+            res.end('<h1>500 - Server Error</h1>');
+        }
+    }
+
+    // =================== STATIC FILES ===================
     else if (method === 'GET') {
         let filePath = pathName === '/' ? '/index.html' : pathName;
         const sanitizedPath = path.normalize(filePath).replace(/^(\.\.[\/\\])+/, '');
-        
-        // --- Static Route Protection ---
-        const protectedPages = ['/dashboard.html', '/settings.html'];
+
+        const protectedPages = ['/dashboard.html', '/upload.html', '/watch.html', '/settings.html'];
         if (protectedPages.includes(sanitizedPath)) {
             const email = getSessionEmail(req);
             if (!email) {
@@ -1211,19 +1037,15 @@ const server = http.createServer(async (req, res) => {
                 res.end(content, 'utf-8');
             }
         });
-    } 
-    
+    }
+
     else {
         res.writeHead(405, { 'Content-Type': 'text/plain' });
         res.end("Method Not Allowed");
     }
->>>>>>> 11bc522639be165638c705d1f402c28a40b49eca
 });
 
 server.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}/`);
-    console.log(`Backend URL: https://mystore-1-tp7b.onrender.com`);
-    if (useCloudinary) {
-        console.log(`☁️  Cloudinary storage is ENABLED`);
-    }
+    console.log(`Movie hosting server running at http://localhost:${PORT}/`);
+    console.log(`Movies directory: ${MOVIES_DIR}`);
 });

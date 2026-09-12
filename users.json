@@ -1,11 +1,12 @@
 [
   {
-    "id": "458cd4f3-431b-4fb2-9e28-a2bf706f925c",
-    "name": "seleman",
+    "id": "08d4196c-990f-4d23-8ce3-9e6eaaa9d744",
+    "name": "R. Selleman",
     "email": "kennyselleman@gmail.com",
-    "phone": "0794276148",
-    "salt": "d6d25a0c77fc969f4b95e3882dd4e1cd",
-    "hash": "f06125078174ffd9164f7bef55e58c9724c8e027b844568111d7e10957f8f30b474864795f2e09fd679c9c162fa89783e85914b7810e3ed8281cece933c4633c",
+    "phone": "0789234567",
+    "salt": "055b4f1650ad23e401a8e1cf6d17ad6c",
+    "hash": "c44bbe9120b9ed7102ee3d4acd6fbef5addb634762bee1949886684e69f52c2bd8754f03c8fff09ded01b8ac9c8615e2f9ab07ce4598964cbdab7b0bc62f4f5c",
+    "themePreference": "dark",
     "securityQuestions": [
       {
         "question": "In what city were you born?",
@@ -20,16 +21,16 @@
         "answer": "black"
       }
     ],
-    "themePreference": "dark"
-<<<<<<< HEAD
+    "createdAt": "2026-09-12T11:42:14.604Z"
   },
   {
-    "id": "56edb80e-c5e1-45af-a4cf-37c6fe810272",
-    "name": "Niyifasha Celine",
-    "email": "niyifashaceline4@gmail.com",
-    "phone": "+250787453503",
-    "salt": "ffd9755a2efb6993fa2a1b2aac716823",
-    "hash": "414bfc6384dc132da90011a93ce07a5798a157836ba73accd690abc697f53223b35f8154cd746bf78df6cfd8ebf76135eb9457166bb8619960e9cc9242b21742",
+    "id": "a4d560a4-0c26-468b-93cc-bff710679111",
+    "name": "R. Selleman",
+    "email": "kennyselleman55@gmail.com",
+    "phone": "0789234567",
+    "salt": "a35e44f7dabca9d8b92399487e104847",
+    "hash": "e987a82259222bcb8fc7a748b41874d29d3f45ca3ca6d2303cef7574ffa3f81208073468a3e7d201d226ab39dce310b5a671e24742f32e8e5c2fa1d8da486e0d",
+    "themePreference": "light",
     "securityQuestions": [
       {
         "question": "In what city were you born?",
@@ -37,15 +38,13 @@
       },
       {
         "question": "What is your favorite movie?",
-        "answer": "horror"
+        "answer": "stranger things"
       },
       {
-        "question": "What is your favorite food?",
-        "answer": "ibijumba"
+        "question": "What is your favorite color?",
+        "answer": "black"
       }
     ],
-    "themePreference": "light"
-=======
->>>>>>> 11bc522639be165638c705d1f402c28a40b49eca
+    "createdAt": "2026-09-12T13:15:58.983Z"
   }
 ]

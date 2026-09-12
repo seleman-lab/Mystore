@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Movie - MyStore</title>
+    <link rel="icon" href="assets/logo.png" type="image/x-icon">
+    <meta name="description" content="Upload a movie to your MyStore library.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="nav-brand">🎬 MyStore</a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="dashboard.html">My Library</a>
+                <a href="upload.html" class="active">Upload</a>
+                <a href="settings.html">Settings</a>
+                <a href="help.html">Help</a>
+                <a href="#" id="logout-btn">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container upload-container">
+        <div class="dashboard-header">
+            <div>
+                <h1>Upload a Movie</h1>
+                <p class="page-sub">Videos are saved to your local server storage and streamed on demand.</p>
+            </div>
+        </div>
+
+        <form id="upload-form" class="upload-form">
+            <div class="upload-card">
+                <h2>🎬 Video File</h2>
+                <p class="hint">MP4, WebM, MOV, MKV or OGG · up to 5 GB</p>
+
+                <label class="dropzone" id="video-dropzone">
+                    <input type="file" id="video-file" accept="video/*" hidden>
+                    <div class="dz-content">
+                        <div class="dz-icon">📹</div>
+                        <p class="dz-title">Drop your video here or <span>click to browse</span></p>
+                        <p class="dz-name" id="video-name">No file selected</p>
+                    </div>
+                </label>
+
+                <div class="progress-row" id="video-progress-row" style="display:none;">
+                    <div class="progress-bar"><div class="progress-fill" id="video-progress"></div></div>
+                    <span class="progress-text" id="video-progress-text">0%</span>
+                </div>
+            </div>
+
+            <div class="upload-card">
+                <h2>🖼️ Poster Image</h2>
+                <p class="hint">Optional - used as the movie cover. PNG, JPG or WEBP · up to 10 MB</p>
+
+                <label class="dropzone poster-dz" id="poster-dropzone">
+                    <input type="file" id="poster-file" accept="image/*" hidden>
+                    <div class="dz-content">
+                        <div class="dz-icon">🎞️</div>
+                        <p class="dz-title">Drop a poster here or <span>click to browse</span></p>
+                        <p class="dz-name" id="poster-name">No file selected</p>
+                    </div>
+                </label>
+            </div>
+
+            <div class="upload-card">
+                <h2>📝 Movie Details</h2>
+                <div class="form-row">
+                    <label for="m-title-input">Title <span class="req">*</span></label>
+                    <input type="text" id="m-title-input" class="form-control" required placeholder="e.g. My Awesome Film">
+                </div>
+                <div class="form-grid">
+                    <div class="form-row">
+                        <label for="m-genre-input">Genre</label>
+                        <select id="m-genre-input" class="form-control">
+                            <option value="">-- Select genre --</option>
+                            <option>Action</option>
+                            <option>Adventure</option>
+                            <option>Animation</option>
+                            <option>Comedy</option>
+                            <option>Crime</option>
+                            <option>Documentary</option>
+                            <option>Drama</option>
+                            <option>Family</option>
+                            <option>Fantasy</option>
+                            <option>Horror</option>
+                            <option>Mystery</option>
+                            <option>Romance</option>
+                            <option>Sci-Fi</option>
+                            <option>Thriller</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="m-year-input">Year</label>
+                        <input type="number" id="m-year-input" class="form-control" min="1900" max="2100" placeholder="2026">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label for="m-desc-input">Description</label>
+                    <textarea id="m-desc-input" class="form-control" rows="3" placeholder="A short synopsis of your movie..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-upload" id="upload-submit">🚀 Upload Movie</button>
+            </div>
+        </form>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
