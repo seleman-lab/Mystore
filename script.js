@@ -396,6 +396,7 @@ const loadMovies = async () => {
             : `<div class="movie-poster placeholder"><span>🎬</span></div>`}
           <div class="movie-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
           <div class="movie-badge genre">${movie.genre || 'Movie'}</div>
+          ${movie.downloadEnabled ? `<div class="movie-badge dl" title="Downloads enabled">⬇ DL</div>` : ''}
         </div>
         <div class="movie-card-info">
           <h3 class="movie-title">${movie.title}</h3>
@@ -472,6 +473,7 @@ if (uploadForm) {
   let videoFile = null;
   let posterFile = null;
   let stickerFile = null;
+  let previewPosterUrl = null;
 
   const videoDz = document.getElementById('video-dropzone');
   const posterDz = document.getElementById('poster-dropzone');
@@ -501,6 +503,9 @@ if (uploadForm) {
     posterFile = f;
     document.getElementById('poster-name').textContent = f.name;
     document.getElementById('poster-name').classList.add('selected');
+    if (previewPosterUrl) URL.revokeObjectURL(previewPosterUrl);
+    previewPosterUrl = URL.createObjectURL(f);
+    refreshDownloadPreview();
   }, 'poster-name');
 
   if (stickerDz && stickerInput) {
@@ -510,6 +515,74 @@ if (uploadForm) {
       document.getElementById('sticker-name').classList.add('selected');
     }, 'sticker-name');
   }
+
+  // ---- Download page settings ----
+  const dlEnabled = document.getElementById('download-enabled');
+  const dlAccess = document.getElementById('download-access');
+  const dlEmailsRow = document.getElementById('download-emails-row');
+  const dlPreview = document.getElementById('dl-preview');
+  let prevAccess = 'anyone';
+
+  const onDlAccessChange = () => {
+    if (dlEmailsRow) dlEmailsRow.style.display = dlAccess.value === 'permission' ? 'block' : 'none';
+  };
+  if (dlAccess) dlAccess.addEventListener('change', onDlAccessChange);
+  if (dlEnabled) dlEnabled.addEventListener('change', () => {
+    if (dlEnabled.checked) {
+      if (dlAccess.value === 'none') dlAccess.value = prevAccess;
+      prevAccess = dlAccess.value;
+    } else {
+      prevAccess = dlAccess.value;
+      dlAccess.value = 'none';
+    }
+    onDlAccessChange();
+  });
+
+  const renderDownloadPreview = () => {
+    if (!dlPreview) return;
+    const htmlEl = document.getElementById('dl-html');
+    const cssEl = document.getElementById('dl-css');
+    if (!htmlEl || !cssEl) return;
+    const title = document.getElementById('m-title-input').value.trim() || 'My Awesome Film';
+    const genre = document.getElementById('m-genre-input').value || 'Genre';
+    const year = document.getElementById('m-year-input').value || '2026';
+    const desc = document.getElementById('m-desc-input').value.trim() || 'Your movie description will appear here.';
+    const poster = previewPosterUrl || '';
+    let body = htmlEl.value
+      .split('{{TITLE}}').join(title)
+      .split('{{POSTER}}').join(poster)
+      .split('{{BRAND}}').join('')
+      .split('{{DESCRIPTION}}').join(desc)
+      .split('{{GENRE}}').join(genre)
+      .split('{{YEAR}}').join(year)
+      .split('{{DOWNLOAD_BUTTON}}').join('<a class="dl-btn" href="#" onclick="return false">⬇ Download Movie</a>');
+    const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      html,body { min-height:100%; }
+      body { font-family:system-ui,sans-serif; color:#fff; display:flex; flex-direction:column; background:#0f1117; }
+      .design-body { flex:1; }
+      .dl-bar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 24px; background:#161a24; border-top:1px solid rgba(255,255,255,.08); position:sticky; bottom:0; flex-wrap:wrap; }
+      .dl-bar strong { font-size:15px; display:block; }
+      .dl-bar span { font-size:12px; color:rgba(255,255,255,.55); }
+      .dl-btn { display:inline-flex; align-items:center; gap:8px; background:#e50914; color:#fff; text-decoration:none; font-weight:700; padding:12px 24px; border-radius:10px; white-space:nowrap; }
+      .dl-btn:hover { background:#f6121d; }
+      </style><style>${cssEl.value}</style></head><body>
+      <div class="design-body">${body}</div>
+      <footer class="dl-bar"><div><strong>${title}</strong><span>Sample preview · the real page shows file size</span></div><a class="dl-btn" href="#" onclick="return false">⬇ Download ${title}</a></footer>
+      </body></html>`;
+    dlPreview.srcdoc = doc;
+  };
+
+  const refreshDownloadPreview = () => {
+    if (window.__dlPreviewTimer) clearTimeout(window.__dlPreviewTimer);
+    window.__dlPreviewTimer = setTimeout(renderDownloadPreview, 250);
+  };
+  ['m-title-input', 'm-genre-input', 'm-year-input', 'm-desc-input', 'dl-html', 'dl-css'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', refreshDownloadPreview);
+  });
+  renderDownloadPreview();
+  onDlAccessChange();
 
   uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -590,7 +663,11 @@ if (uploadForm) {
           year: document.getElementById('m-year-input').value,
           videoFile: vidData.videoFile,
           posterFile: posterFileResult ? posterFileResult.posterFile : null,
-          brandFile: stickerFileResult ? stickerFileResult.brandFile : null
+          brandFile: stickerFileResult ? stickerFileResult.brandFile : null,
+          downloadAccess: dlEnabled && dlEnabled.checked ? dlAccess.value : 'none',
+          downloadAllowedEmails: document.getElementById('download-emails').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).slice(0, 100),
+          downloadPageHtml: document.getElementById('dl-html').value,
+          downloadPageCss: document.getElementById('dl-css').value
         })
       });
       const saveData = await saveRes.json();
@@ -602,6 +679,11 @@ if (uploadForm) {
       document.getElementById('poster-name').textContent = 'No file selected';
       const stickerNameEl = document.getElementById('sticker-name');
       if (stickerNameEl) stickerNameEl.textContent = 'No file selected';
+      if (dlEnabled) dlEnabled.checked = true;
+      if (dlAccess) dlAccess.value = 'anyone';
+      if (previewPosterUrl) { URL.revokeObjectURL(previewPosterUrl); previewPosterUrl = null; }
+      renderDownloadPreview();
+      onDlAccessChange();
       window.location.href = 'dashboard.html';
     } catch (error) {
       alert(`❌ ${error.message || 'Upload failed'}`);
@@ -789,6 +871,13 @@ const initWatch = async () => {
     const iframeSrc = movie.embedUrl;
     const code = `<iframe src="${iframeSrc}" width="640" height="360" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture" style="max-width:100%;border:none;border-radius:12px;"></iframe>`;
     embedCode.value = code;
+
+    // Download page link (owner-only page; access is enforced server-side)
+    const downloadBtn = document.getElementById('download-page-btn');
+    if (downloadBtn && movie.downloadPageUrl) {
+      downloadBtn.href = movie.downloadPageUrl;
+      downloadBtn.style.display = '';
+    }
 
     if (embedBtn) {
       embedBtn.addEventListener('click', async () => {

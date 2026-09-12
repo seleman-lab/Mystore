@@ -14,6 +14,7 @@ class CinePlayer {
       controls: true,
       embed: false,
       embedUrl: null,
+      downloadUrl: null,
       brand: null,
       showBrand: true
     }, options);
@@ -54,6 +55,7 @@ class CinePlayer {
           <span class="name">${this._esc(o.title)}</span>
         </div>
         ${o.embed && o.embedUrl ? `<a class="cp-embed-badge" href="${o.embedUrl}" target="_blank" rel="noopener">▶ Watch on MyStore</a>` : ''}
+        ${o.embed && o.downloadUrl ? `<a class="cp-embed-badge cp-dl-badge" href="${o.downloadUrl}" target="_blank" rel="noopener nofollow">⬇ Download</a>` : ''}
       </div>
 
       <div class="cp-error"><div class="icon">⚠️</div><div class="msg">Could not play this video.</div><div class="detail"></div></div>

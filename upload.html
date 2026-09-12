@@ -99,6 +99,62 @@
             </div>
 
             <div class="upload-card">
+                <h2>⬇ Download Page</h2>
+                <p class="hint">Give viewers a beautiful page to download this movie. Design it yourself with HTML + CSS, and the download button is added for you automatically.</p>
+
+                <div class="opt-row">
+                    <label class="checkbox">
+                        <input type="checkbox" id="download-enabled" checked>
+                        <span><strong>Enable downloads for this movie</strong></span>
+                    </label>
+                    <p class="hint">When off, the download page is hidden from everyone except you (for previewing your design).</p>
+                </div>
+
+                <div class="form-row" id="download-access-row">
+                    <label for="download-access">Who can download</label>
+                    <select id="download-access" class="form-control">
+                        <option value="anyone" selected>🌍 Anyone with the link</option>
+                        <option value="permission">🔐 Only approved people</option>
+                        <option value="none">🚫 No one (owner only)</option>
+                    </select>
+                </div>
+
+                <div class="form-row" id="download-emails-row" style="display:none;">
+                    <label for="download-emails">Allowed emails</label>
+                    <textarea id="download-emails" class="form-control" rows="2" placeholder="friend@example.com, family@example.com&#10;separate emails with commas or new lines"></textarea>
+                </div>
+
+                <div class="design-grid">
+                    <div class="form-row">
+                        <label for="dl-html">Page HTML</label>
+                        <textarea id="dl-html" class="form-control dl-editor" rows="14" spellcheck="false"><div class="hero">
+  <img class="poster" src="{{POSTER}}" alt="Poster">
+  <h1 class="title">{{TITLE}}</h1>
+  <p class="meta">{{GENRE}} · {{YEAR}}</p>
+  <p class="desc">{{DESCRIPTION}}</p>
+  {{DOWNLOAD_BUTTON}}
+</div></textarea>
+                    </div>
+                    <div class="form-row">
+                        <label for="dl-css">Page CSS</label>
+                        <textarea id="dl-css" class="form-control dl-editor" rows="14" spellcheck="false">body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #fff; font-family: system-ui, sans-serif; text-align: center; }
+.hero { max-width: 520px; }
+.poster { width: 190px; height: 280px; object-fit: cover; border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.55); }
+.title { font-size: 30px; margin: 18px 0 6px; }
+.meta { opacity: .8; margin: 0 0 12px; letter-spacing: .3px; }
+.desc { opacity: .65; line-height: 1.65; max-width: 440px; margin: 0 auto; }</textarea>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label for="dl-preview">Live Preview</label>
+                    <iframe id="dl-preview" class="dl-preview" sandbox="allow-same-origin" title="Download page preview"></iframe>
+                </div>
+
+                <p class="hint">Placeholders you can use: <code>{{TITLE}}</code> <code>{{POSTER}}</code> <code>{{BRAND}}</code> <code>{{DESCRIPTION}}</code> <code>{{GENRE}}</code> <code>{{YEAR}}</code> <code>{{DOWNLOAD_BUTTON}}</code>. Scripts are removed for safety. A download bar with the real download button is always shown at the bottom.</p>
+            </div>
+
+            <div class="upload-card">
                 <h2>📝 Movie Details</h2>
                 <div class="form-row">
                     <label for="m-title-input">Title <span class="req">*</span></label>

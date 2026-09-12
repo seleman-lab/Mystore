@@ -224,8 +224,40 @@ const publicMovie = (m, origin) => {
         posterUrl: m.posterFile ? `${base}/poster/${m.posterFile}` : null,
         brandUrl: m.brandFile ? `${base}/poster/${m.brandFile}` : null,
         streamUrl: `${base}/stream/${m.streamToken}`,
-        embedUrl: `${base}/embed/${m.streamToken}`
+        embedUrl: `${base}/embed/${m.streamToken}`,
+        downloadPageUrl: `${base}/download-page/${m.id}`,
+        downloadEnabled: (m.downloadAccess || 'none') !== 'none'
     };
+};
+
+// Sanitize owner-supplied HTML/CSS for the download page (HTML+CSS only, no scripts).
+const sanitizeDesignHtml = (html) => {
+    if (typeof html !== 'string') return '';
+    return html
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+        .replace(/\s+href\s*=\s*("javascript:.*"|'javascript:.*')/gi, '');
+};
+
+const canDownloadMovie = (movie, email) => {
+    const access = movie.downloadAccess || 'none';
+    const ownerEmail = (movie.userEmail || '').toLowerCase();
+    const isOwner = email && ownerEmail === email.toLowerCase();
+    if (access === 'anyone') return true;
+    if (access === 'permission') {
+        if (isOwner) return true;
+        if (email && (movie.downloadAllowedEmails || []).some(e => e.toLowerCase() === email.toLowerCase())) return true;
+        return false;
+    }
+    return !!isOwner; // 'none': owner can still preview/download their own
+};
+
+const formatBytes = (bytes) => {
+    if (!isFinite(bytes) || bytes <= 0) return '';
+    const gb = bytes / (1024 ** 3);
+    if (gb >= 1) return gb.toFixed(2) + ' GB';
+    const mb = bytes / (1024 ** 2);
+    return mb.toFixed(0) + ' MB';
 };
 
 // ============================================
@@ -654,7 +686,7 @@ const server = http.createServer(async (req, res) => {
             }
 
             const body = await parseBody(req);
-            const { title, description, genre, year, videoFile, posterFile, brandFile } = body;
+            const { title, description, genre, year, videoFile, posterFile, brandFile, downloadAccess, downloadAllowedEmails, downloadPageHtml, downloadPageCss } = body;
 
             if (!title || !videoFile) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -680,7 +712,13 @@ const server = http.createServer(async (req, res) => {
                 userEmail: email,
                 uploadDate: new Date().toISOString(),
                 views: 0,
-                streamToken: crypto.randomBytes(24).toString('hex')
+                streamToken: crypto.randomBytes(24).toString('hex'),
+                downloadAccess: ['anyone', 'permission', 'none'].includes(downloadAccess) ? downloadAccess : 'none',
+                downloadAllowedEmails: Array.isArray(downloadAllowedEmails)
+                    ? downloadAllowedEmails.map(e => String(e).trim().toLowerCase()).filter(Boolean)
+                    : [],
+                downloadPageHtml: typeof downloadPageHtml === 'string' ? downloadPageHtml.slice(0, 50000) : '',
+                downloadPageCss: typeof downloadPageCss === 'string' ? downloadPageCss.slice(0, 50000) : ''
             };
 
             const movies = readJSON(MOVIES_FILE);
@@ -860,6 +898,123 @@ const server = http.createServer(async (req, res) => {
         }
     }
 
+    // =================== DOWNLOAD PAGE + DOWNLOAD ===================
+    else if (method === 'GET' && pathName.startsWith('/download-page/')) {
+        try {
+            const id = pathName.split('/')[2]?.split('?')[0];
+            const movies = readJSON(MOVIES_FILE);
+            const movie = movies.find(m => m.id === id);
+            if (!movie) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Movie not found" }));
+            }
+
+            const origin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+            const email = getSessionEmail(req);
+            const access = movie.downloadAccess || 'none';
+            const ownerEmail = (movie.userEmail || '').toLowerCase();
+            const isOwner = email && ownerEmail === email.toLowerCase();
+            const isAllowed = email && (movie.downloadAllowedEmails || []).some(e => e.toLowerCase() === email.toLowerCase());
+
+            let allowed = access === 'anyone';
+            if (access === 'permission') allowed = isOwner || isAllowed;
+            if (access === 'none') allowed = !!isOwner;
+
+            const filePath = path.join(MOVIES_DIR, movie.videoFile);
+            const fileExists = fs.existsSync(filePath);
+            const stats = fileExists ? fs.statSync(filePath) : null;
+            const ext = fileExists ? path.extname(filePath).toLowerCase() : '.mp4';
+            const safeTitle = (movie.title || 'movie').replace(/[^\w\- ]+/g, '').trim() || 'movie';
+            const filename = `${safeTitle}${ext}`;
+            const fileInfo = `${formatBytes(stats ? stats.size : 0)}${stats ? ' · ' + ext.replace('.', '').toUpperCase() : ''}`;
+
+            let dbHtml = sanitizeDesignHtml(movie.downloadPageHtml || '');
+            const dbBtn = `<a class="dl-btn" href="${origin}/download/${movie.streamToken}" rel="noopener nofollow">⬇ Download Movie</a>`;
+            dbHtml = dbHtml
+                .split('{{TITLE}}').join(movie.title || '')
+                .split('{{POSTER}}').join(movie.posterFile ? `${origin}/poster/${movie.posterFile}` : '')
+                .split('{{BRAND}}').join(movie.brandFile ? `${origin}/poster/${movie.brandFile}` : '')
+                .split('{{DESCRIPTION}}').join(movie.description || '')
+                .split('{{GENRE}}').join(movie.genre || '')
+                .split('{{YEAR}}').join(movie.year ? String(movie.year) : '')
+                .split('{{DOWNLOAD_BUTTON}}').join(dbBtn);
+
+            const denied = !allowed;
+            const disabled = access === 'none';
+
+            const template = fs.readFileSync(path.join(__dirname, 'download.html'), 'utf8');
+            const html = template
+                .replace(/__PAGE_TITLE__/g, `Download ${movie.title}`)
+                .replace(/__CUSTOM_CSS__/g, movie.downloadPageCss || '')
+                .replace(/__CUSTOM_BODY__/g, dbHtml)
+                .replace(/__DESIGN_DISPLAY__/g, denied ? 'none' : 'block')
+                .replace(/__DENIED_DISPLAY__/g, denied ? 'flex' : 'none')
+                .replace(/__BTN_DISPLAY__/g, (denied || disabled) ? 'none' : 'inline-flex')
+                .replace(/__NOTE_DISPLAY__/g, (!denied && disabled) ? 'block' : 'none')
+                .replace(/__DENIED_TITLE__/g, access === 'none' ? 'Downloads are disabled' : 'Access restricted')
+                .replace(/__DENIED_MSG__/g,
+                    access === 'none'
+                        ? 'The owner has not enabled downloads for this movie.'
+                        : 'Only people the owner approves can download this movie. Ask the owner to add your email.')
+                .replace(/__FOOTER_NOTE__/g, (!denied && disabled) ? 'Downloads are disabled by the owner.' : '')
+                .replace(/__TITLE__/g, movie.title)
+                .replace(/__FILE_INFO__/g, fileInfo)
+                .replace(/__DOWNLOAD_URL__/g, `${origin}/download/${movie.streamToken}`)
+                .replace(/__FILENAME__/g, filename);
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(html);
+        } catch (error) {
+            console.error("Download page error:", error);
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end("Download page error");
+        }
+    }
+
+    else if (method === 'GET' && pathName.startsWith('/download/')) {
+        try {
+            const token = pathName.split('/')[2]?.split('?')[0];
+            const movies = readJSON(MOVIES_FILE);
+            const movie = movies.find(m => m.streamToken === token);
+            if (!movie) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Movie not found" }));
+            }
+
+            const email = getSessionEmail(req);
+            if (!canDownloadMovie(movie, email)) {
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "You do not have permission to download this movie" }));
+            }
+
+            const filePath = path.join(MOVIES_DIR, movie.videoFile);
+            if (!fs.existsSync(filePath)) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Video file missing on server" }));
+            }
+
+            const stats = fs.statSync(filePath);
+            const extname = path.extname(filePath).toLowerCase();
+            const contentType = mimeTypes[extname] || 'application/octet-stream';
+            const safeTitle = (movie.title || 'movie').replace(/[^\w\- ]+/g, '').trim() || 'movie';
+            const filename = `${safeTitle}${extname}`;
+
+            res.writeHead(200, {
+                'Content-Type': contentType,
+                'Content-Length': stats.size,
+                'Content-Disposition': `attachment; filename="${filename}"`,
+                'Cache-Control': 'no-store',
+                'Accept-Ranges': 'bytes'
+            });
+            fs.createReadStream(filePath).pipe(res);
+        } catch (error) {
+            console.error("Download error:", error);
+            if (!res.headersSent) {
+                res.writeHead(500, { 'Content-Type': 'text/plain' });
+                res.end("Download error");
+            }
+        }
+    }
+
     // =================== SETTINGS / PROFILE ===================
     else if (method === 'GET' && pathName === '/get-profile') {
         try {
@@ -1025,10 +1180,15 @@ const server = http.createServer(async (req, res) => {
                 }
                 const origin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
                 const title = (movie.title || 'MyStore video').replace(/"/g, '&quot;');
+                const embedEmail = getSessionEmail(req);
+                const downloadUrl = (movie.downloadAccess || 'none') !== 'none' && canDownloadMovie(movie, embedEmail)
+                    ? `${origin}/download-page/${movie.id}`
+                    : '';
                 html = html
                     .replace(/__STREAM_URL__/g, `${origin}/stream/${token}`)
                     .replace(/__POSTER_URL__/g, movie.posterFile ? `${origin}/poster/${movie.posterFile}` : '')
                     .replace(/__BRAND_URL__/g, movie.brandFile ? `${origin}/poster/${movie.brandFile}` : '')
+                    .replace(/__DOWNLOAD_URL__/g, downloadUrl)
                     .replace(/__TITLE__/g, title)
                     .replace(/__LINK__/g, `${origin}/watch.html?id=${movie.id}`);
                 res.writeHead(200, { 'Content-Type': 'text/html' });

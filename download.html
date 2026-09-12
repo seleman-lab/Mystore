@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>__PAGE_TITLE__</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { min-height: 100%; background: #0f1117; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+        main.dl-main { flex: 1; }
+
+        /* Custom design area (owner's HTML) */
+        .design-body { display: __DESIGN_DISPLAY__; }
+
+        /* Access denied / disabled panel */
+        .denied-wrap {
+            display: __DENIED_DISPLAY__;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 32px 20px;
+        }
+        .denied-wrap .card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 44px 36px;
+            max-width: 460px;
+        }
+        .denied-wrap .icon { font-size: 52px; }
+        .denied-wrap h2 { margin: 16px 0 8px; font-size: 22px; }
+        .denied-wrap p { color: rgba(255, 255, 255, 0.65); font-size: 15px; line-height: 1.6; }
+        .denied-wrap .pub-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 18px;
+            border-radius: 99px;
+            text-decoration: none;
+            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* Bottom download bar */
+        .dl-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 24px;
+            background: #161a24;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            bottom: 0;
+            flex-wrap: wrap;
+        }
+        .dl-bar .dl-info { min-width: 0; }
+        .dl-bar .dl-info strong { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
+        .dl-bar .dl-info span { display: block; font-size: 12px; color: rgba(255, 255, 255, 0.55); margin-top: 2px; }
+        .dl-btn {
+            display: __BTN_DISPLAY__;
+            align-items: center;
+            gap: 8px;
+            background: #e50914;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 15px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            white-space: nowrap;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+        .dl-btn:hover { background: #f6121d; transform: translateY(-1px); }
+        .dl-note { display: __NOTE_DISPLAY__; font-size: 13px; color: rgba(255, 255, 255, 0.6); }
+        @media (max-width: 520px) {
+            .dl-bar { flex-direction: column; align-items: stretch; text-align: center; }
+            .dl-bar .dl-info strong { max-width: none; }
+            .dl-btn { justify-content: center; }
+        }
+    </style>
+    <style>__CUSTOM_CSS__</style>
+</head>
+<body>
+    <main class="dl-main">
+        <div class="design-body">__CUSTOM_BODY__</div>
+        <div class="denied-wrap">
+            <div class="card">
+                <div class="icon">🔒</div>
+                <h2>__DENIED_TITLE__</h2>
+                <p>__DENIED_MSG__</p>
+                <a class="pub-link" href="https://mystore.app/" onclick="return false">⬆ Powered by MyStore</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="dl-bar">
+        <div class="dl-info">
+            <strong>__TITLE__</strong>
+            <span>__FILE_INFO__</span>
+        </div>
+        <span class="dl-note">__FOOTER_NOTE__</span>
+        <a class="dl-btn" href="__DOWNLOAD_URL__" download="__FILENAME__" rel="noopener nofollow">⬇ Download __FILENAME__</a>
+    </footer>
+</body>
+</html>
