@@ -238,14 +238,18 @@ const server = http.createServer(async (req, res) => {
     // CORS
     const origin = req.headers.origin;
     const allowedOrigins = [...FRONTEND_URLS, 'https://seleman-lab.github.io', 'https://seleman-lab.github.io/Mystore'];
-    if (allowedOrigins.includes(origin)) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-    } else {
-        res.setHeader('Access-Control-Allow-Origin', '*');
+    const originAllowed = origin
+        && (origin === 'null'
+            || allowedOrigins.includes(origin)
+            || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin));
+    if (origin) {
+        if (originAllowed) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+        }
+        res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST, GET, PUT, DELETE');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     }
-    res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST, GET, PUT, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
 
     if (method === 'OPTIONS') {
         res.writeHead(204);

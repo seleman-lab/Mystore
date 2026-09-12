@@ -1,7 +1,10 @@
 // API Configuration
-const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? `http://${window.location.hostname}:3000`
-  : 'http://' + window.location.host;
+const API_BASE_URL = (() => {
+  const { protocol, hostname, port } = window.location;
+  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '';
+  if (isLocalHost) return 'http://localhost:3000';
+  return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+})();
 
 // ============================================
 // THEME - apply saved theme
@@ -127,7 +130,7 @@ if (loginForm) {
         alert(`❌ ${data.error || 'Login failed'}`);
       }
     } catch (error) {
-      alert('❌ Network error. Please check your connection and try again.');
+      alert('❌ Cannot reach the server at ' + API_BASE_URL + '. Is the server running? Start it with: node server.js');
     } finally {
       submitBtn.innerText = originalText;
       submitBtn.disabled = false;
