@@ -222,6 +222,7 @@ const publicMovie = (m, origin) => {
         uploadDate: m.uploadDate,
         views: m.views || 0,
         posterUrl: m.posterFile ? `${base}/poster/${m.posterFile}` : null,
+        brandUrl: m.brandFile ? `${base}/poster/${m.brandFile}` : null,
         streamUrl: `${base}/stream/${m.streamToken}`,
         embedUrl: `${base}/embed/${m.streamToken}`
     };
@@ -614,6 +615,35 @@ const server = http.createServer(async (req, res) => {
         }
     }
 
+    else if (method === 'POST' && pathName === '/upload/brand') {
+        try {
+            const email = getSessionEmail(req);
+            if (!email) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
+            }
+
+            const rawName = req.headers['x-file-name'] || 'sticker.png';
+            const ext = path.extname(path.basename(rawName)).toLowerCase() || '.png';
+            if (!['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(ext)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Unsupported image format. Use PNG, JPG, GIF, WEBP or SVG." }));
+            }
+
+            const uniqueFilename = 'sticker_' + crypto.randomUUID() + ext;
+            const destPath = path.join(MOVIES_DIR, uniqueFilename);
+
+            await streamToDisk(req, destPath, MAX_POSTER_SIZE);
+
+            res.writeHead(201, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: "Sticker uploaded", brandFile: uniqueFilename, brandUrl: `/poster/${uniqueFilename}` }));
+        } catch (error) {
+            console.error("Sticker upload error:", error);
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: error.message || "Upload failed" }));
+        }
+    }
+
     // =================== MOVIE CRUD ===================
     else if (method === 'POST' && pathName === '/movie') {
         try {
@@ -624,7 +654,7 @@ const server = http.createServer(async (req, res) => {
             }
 
             const body = await parseBody(req);
-            const { title, description, genre, year, videoFile, posterFile } = body;
+            const { title, description, genre, year, videoFile, posterFile, brandFile } = body;
 
             if (!title || !videoFile) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -646,6 +676,7 @@ const server = http.createServer(async (req, res) => {
                 year: year ? parseInt(year, 10) || null : null,
                 videoFile: safeVideo,
                 posterFile: posterFile ? path.basename(posterFile) : null,
+                brandFile: brandFile ? path.basename(brandFile) : null,
                 userEmail: email,
                 uploadDate: new Date().toISOString(),
                 views: 0,
@@ -997,6 +1028,7 @@ const server = http.createServer(async (req, res) => {
                 html = html
                     .replace(/__STREAM_URL__/g, `${origin}/stream/${token}`)
                     .replace(/__POSTER_URL__/g, movie.posterFile ? `${origin}/poster/${movie.posterFile}` : '')
+                    .replace(/__BRAND_URL__/g, movie.brandFile ? `${origin}/poster/${movie.brandFile}` : '')
                     .replace(/__TITLE__/g, title)
                     .replace(/__LINK__/g, `${origin}/watch.html?id=${movie.id}`);
                 res.writeHead(200, { 'Content-Type': 'text/html' });

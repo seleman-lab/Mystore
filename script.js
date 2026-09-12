@@ -468,11 +468,14 @@ const uploadForm = document.getElementById('upload-form');
 if (uploadForm) {
   const videoInput = document.getElementById('video-file');
   const posterInput = document.getElementById('poster-file');
+  const stickerInput = document.getElementById('sticker-file');
   let videoFile = null;
   let posterFile = null;
+  let stickerFile = null;
 
   const videoDz = document.getElementById('video-dropzone');
   const posterDz = document.getElementById('poster-dropzone');
+  const stickerDz = document.getElementById('sticker-dropzone');
 
   const setupDropzone = (dz, input, onPick, nameElId) => {
     dz.addEventListener('click', (e) => { if (e.target.tagName !== 'INPUT') input.click(); });
@@ -499,6 +502,14 @@ if (uploadForm) {
     document.getElementById('poster-name').textContent = f.name;
     document.getElementById('poster-name').classList.add('selected');
   }, 'poster-name');
+
+  if (stickerDz && stickerInput) {
+    setupDropzone(stickerDz, stickerInput, (f) => {
+      stickerFile = f;
+      document.getElementById('sticker-name').textContent = f.name;
+      document.getElementById('sticker-name').classList.add('selected');
+    }, 'sticker-name');
+  }
 
   uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -556,6 +567,17 @@ if (uploadForm) {
         posterFileResult = JSON.parse(posterResult.response);
       }
 
+      // 2b) Optional custom sticker
+      let stickerFileResult = null;
+      if (stickerFile) {
+        const stickerResult = await uploadWithProgress(stickerFile, `${API_BASE_URL}/upload/brand`, null, null);
+        if (!stickerResult.ok) {
+          const data = JSON.parse(stickerResult.response || '{}');
+          throw new Error(data.error || 'Sticker upload failed');
+        }
+        stickerFileResult = JSON.parse(stickerResult.response);
+      }
+
       // 3) Save movie metadata
       const saveRes = await fetch(`${API_BASE_URL}/movie`, {
         method: 'POST',
@@ -567,7 +589,8 @@ if (uploadForm) {
           genre: document.getElementById('m-genre-input').value,
           year: document.getElementById('m-year-input').value,
           videoFile: vidData.videoFile,
-          posterFile: posterFileResult ? posterFileResult.posterFile : null
+          posterFile: posterFileResult ? posterFileResult.posterFile : null,
+          brandFile: stickerFileResult ? stickerFileResult.brandFile : null
         })
       });
       const saveData = await saveRes.json();
@@ -577,6 +600,8 @@ if (uploadForm) {
       uploadForm.reset();
       document.getElementById('video-name').textContent = 'No file selected';
       document.getElementById('poster-name').textContent = 'No file selected';
+      const stickerNameEl = document.getElementById('sticker-name');
+      if (stickerNameEl) stickerNameEl.textContent = 'No file selected';
       window.location.href = 'dashboard.html';
     } catch (error) {
       alert(`❌ ${error.message || 'Upload failed'}`);
@@ -745,8 +770,7 @@ const initWatch = async () => {
       poster: movie.posterUrl,
       title: movie.title,
       autoplay: false,
-      embedUrl: movie.embedUrl,
-      embed: false
+      brand: movie.brandUrl
     });
 
     // Movie info panel
