@@ -248,7 +248,7 @@ const server = http.createServer(async (req, res) => {
             res.setHeader('Access-Control-Allow-Credentials', 'true');
         }
         res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST, GET, PUT, DELETE');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-File-Name');
     }
 
     if (method === 'OPTIONS') {

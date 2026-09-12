@@ -849,6 +849,35 @@ input:checked + .slider:before {
   text-align: right;
 }
 
+.opt-row {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface-color);
+}
+
+.opt-row .checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.opt-row .checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-color);
+}
+
+.opt-row .hint {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.opt-row .form-control {
+  width: 100%;
+}
+
 /* ============================================================
    WATCH PAGE
    ============================================================ */

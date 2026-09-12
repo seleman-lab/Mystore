@@ -33,24 +33,42 @@
         </div>
 
         <form id="upload-form" class="upload-form">
-            <div class="upload-card">
-                <h2>🎬 Video File</h2>
-                <p class="hint">MP4, WebM, MOV, MKV or OGG · up to 5 GB</p>
+<div class="upload-card">
+                    <h2>🎬 Video File</h2>
+                    <p class="hint">MP4, WebM, MOV, MKV or OGG · up to 5 GB</p>
 
-                <label class="dropzone" id="video-dropzone">
-                    <input type="file" id="video-file" accept="video/*" hidden>
-                    <div class="dz-content">
-                        <div class="dz-icon">📹</div>
-                        <p class="dz-title">Drop your video here or <span>click to browse</span></p>
-                        <p class="dz-name" id="video-name">No file selected</p>
+                    <label class="dropzone" id="video-dropzone">
+                        <input type="file" id="video-file" accept="video/*" hidden>
+                        <div class="dz-content">
+                            <div class="dz-icon">📹</div>
+                            <p class="dz-title">Drop your video here or <span>click to browse</span></p>
+                            <p class="dz-name" id="video-name">No file selected</p>
+                        </div>
+                    </label>
+
+                    <div class="opt-row">
+                        <label class="checkbox">
+                            <input type="checkbox" id="compress-video" checked>
+                            <span><strong>Compress before upload</strong></span>
+                        </label>
+                        <p class="hint">Re-encodes the video to a smaller WebM on your device, so big files upload in a few minutes instead of much longer.</p>
+                        <select id="compress-quality" class="form-control">
+                            <option value="fast">💨 Fast — smallest file (480p)</option>
+                            <option value="good" selected>👍 Balanced — small file (720p)</option>
+                            <option value="best">✨ Close to original (up to 1080p)</option>
+                        </select>
                     </div>
-                </label>
 
-                <div class="progress-row" id="video-progress-row" style="display:none;">
-                    <div class="progress-bar"><div class="progress-fill" id="video-progress"></div></div>
-                    <span class="progress-text" id="video-progress-text">0%</span>
+                    <div class="progress-row" id="compress-progress-row" style="display:none;">
+                        <div class="progress-bar"><div class="progress-fill" id="compress-progress"></div></div>
+                        <span class="progress-text" id="compress-progress-text">0%</span>
+                    </div>
+
+                    <div class="progress-row" id="video-progress-row" style="display:none;">
+                        <div class="progress-bar"><div class="progress-fill" id="video-progress"></div></div>
+                        <span class="progress-text" id="video-progress-text">0%</span>
+                    </div>
                 </div>
-            </div>
 
             <div class="upload-card">
                 <h2>🖼️ Poster Image</h2>
