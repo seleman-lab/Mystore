@@ -599,9 +599,9 @@ const server = http.createServer(async (req, res) => {
             const rawName = req.headers['x-file-name'] || 'video.mp4';
             const safeName = path.basename(rawName);
             const ext = path.extname(safeName).toLowerCase() || '.mp4';
-            if (!['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.mkv'].includes(ext)) {
+            if (!['.mp4'].includes(ext)) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Unsupported video format. Use MP4, WebM, OGG, MOV or MKV." }));
+                return res.end(JSON.stringify({ error: "Only MP4 (.mp4) videos are allowed. Your file keeps its original format and is never converted." }));
             }
 
             const uniqueFilename = crypto.randomUUID() + ext;

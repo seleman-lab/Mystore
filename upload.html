@@ -35,34 +35,16 @@
         <form id="upload-form" class="upload-form">
 <div class="upload-card">
                     <h2>🎬 Video File</h2>
-                    <p class="hint">MP4, WebM, MOV, MKV or OGG · up to 5 GB</p>
+                    <p class="hint">MP4 only · up to 5 GB · your file keeps its original format and is never converted.</p>
 
                     <label class="dropzone" id="video-dropzone">
-                        <input type="file" id="video-file" accept="video/*" hidden>
+                        <input type="file" id="video-file" accept="video/mp4,.mp4" hidden>
                         <div class="dz-content">
                             <div class="dz-icon">📹</div>
                             <p class="dz-title">Drop your video here or <span>click to browse</span></p>
                             <p class="dz-name" id="video-name">No file selected</p>
                         </div>
                     </label>
-
-                    <div class="opt-row">
-                        <label class="checkbox">
-                            <input type="checkbox" id="compress-video">
-                            <span><strong>Compress before upload</strong></span>
-                        </label>
-                        <p class="hint">Off by default — your video is uploaded exactly as-is and keeps its original format (e.g. MP4 stays MP4). ⚠️ If you enable this, it re-encodes the video to a smaller <strong>WebM</strong> on your device, so the format will change.</p>
-                        <select id="compress-quality" class="form-control">
-                            <option value="fast">💨 Fast — smallest file (480p)</option>
-                            <option value="good" selected>👍 Balanced — small file (720p)</option>
-                            <option value="best">✨ Close to original (up to 1080p)</option>
-                        </select>
-                    </div>
-
-                    <div class="progress-row" id="compress-progress-row" style="display:none;">
-                        <div class="progress-bar"><div class="progress-fill" id="compress-progress"></div></div>
-                        <span class="progress-text" id="compress-progress-text">0%</span>
-                    </div>
 
                     <div class="progress-row" id="video-progress-row" style="display:none;">
                         <div class="progress-bar"><div class="progress-fill" id="video-progress"></div></div>

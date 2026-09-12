@@ -1,226 +1,416 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>__PAGE_TITLE__</title>
-    <style>
-        :root {
-            --bg: #090b11;
-            --surface: rgba(255, 255, 255, 0.045);
-            --border: rgba(255, 255, 255, 0.09);
-            --text: #f4f5f7;
-            --muted: rgba(255, 255, 255, 0.6);
-            --accent: #7c5cff;
-            --accent-2: #49d0ff;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { min-height: 100%; }
-        body {
-            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            color: var(--text);
-            background: var(--bg);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__PAGE_TITLE__</title>
+<style>
+    :root {
+        --bg: #07090f;
+        --surface: rgba(255, 255, 255, 0.045);
+        --surface-2: rgba(255, 255, 255, 0.07);
+        --border: rgba(255, 255, 255, 0.09);
+        --text: #f4f5f7;
+        --muted: rgba(255, 255, 255, 0.6);
+        --accent: #7c5cff;
+        --accent-2: #49d0ff;
+        --pink: #ff5bbf;
+        --success: #3ddc97;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+    }
 
-        /* ambient background */
-        .bg-glow { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
-        .bg-glow::before,
-        .bg-glow::after {
-            content: "";
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(110px);
-            opacity: .55;
-        }
-        .bg-glow::before {
-            width: 620px; height: 620px;
-            left: -140px; top: -200px;
-            background: radial-gradient(circle, rgba(124, 92, 255, .5), transparent 70%);
-        }
-        .bg-glow::after {
-            width: 560px; height: 560px;
-            right: -160px; bottom: -120px;
-            background: radial-gradient(circle, rgba(73, 208, 255, .38), transparent 70%);
-        }
+    /* ---------- ambient background ---------- */
+    .bg-glow { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+    .bg-glow::before, .bg-glow::after {
+        content: ""; position: absolute; border-radius: 50%;
+        filter: blur(110px); opacity: .5;
+    }
+    .bg-glow::before {
+        width: 640px; height: 640px; left: -150px; top: -220px;
+        background: radial-gradient(circle, rgba(124,92,255,.5), transparent 70%);
+    }
+    .bg-glow::after {
+        width: 560px; height: 560px; right: -170px; bottom: -130px;
+        background: radial-gradient(circle, rgba(73,208,255,.38), transparent 70%);
+    }
+    .bg-grid {
+        position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .35;
+        background-image:
+            linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+        background-size: 44px 44px;
+        mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 75%);
+        -webkit-mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 75%);
+    }
 
-        main.dl-main { flex: 1; width: 100%; }
+    main.dl-main { flex: 1; width: 100%; }
 
-        /* brand header */
-        .brand-head {
-            display: flex; align-items: center; justify-content: space-between; gap: 16px;
-            max-width: 980px; margin: 0 auto; width: 100%;
-            padding: 20px 24px;
-        }
-        .brand-logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; letter-spacing: -.01em; text-decoration: none; color: var(--text); }
-        .brand-logo .dot {
-            width: 30px; height: 30px; border-radius: 9px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-2));
-            box-shadow: 0 6px 18px -4px rgba(124, 92, 255, .6);
-            display: inline-flex; align-items: center; justify-content: center;
-            font-size: 15px;
-        }
-        .brand-powered { font-size: 13px; color: var(--muted); text-decoration: none; }
-        .brand-powered b { color: #b9aaff; font-weight: 700; }
+    /* ---------- brand header ---------- */
+    .brand-head {
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        max-width: 1020px; margin: 0 auto; width: 100%;
+        padding: 20px 24px;
+        animation: fadeDown .6s ease both;
+    }
+    .brand-logo {
+        display: inline-flex; align-items: center; gap: 10px;
+        font-weight: 800; font-size: 17px; letter-spacing: -.01em;
+        text-decoration: none; color: var(--text);
+    }
+    .brand-logo .dot {
+        width: 32px; height: 32px; border-radius: 10px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 6px 18px -4px rgba(124,92,255,.6);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 14px;
+    }
+    .brand-powered { font-size: 13px; color: var(--muted); text-decoration: none; transition: color .2s; }
+    .brand-powered b { color: #b9aaff; font-weight: 700; }
+    .brand-powered:hover { color: var(--text); }
 
-        .design-body { display: __DESIGN_DISPLAY__; width: 100%; }
-        .design-inner {
-            display: flex; align-items: center; justify-content: center;
-            width: 100%; padding: 24px;
-        }
+    /* ---------- hero ---------- */
+    .hero {
+        display: flex; align-items: center; justify-content: center; gap: 46px;
+        max-width: 900px; margin: 0 auto;
+        padding: 44px 24px 40px;
+        flex-wrap: wrap;
+        animation: fadeUp .7s .1s ease both;
+    }
+    .poster-wrap { position: relative; flex: none; }
+    .poster {
+        width: 220px; height: 315px; object-fit: cover; border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: 0 28px 56px -18px rgba(0,0,0,.7);
+        background: rgba(255,255,255,.04);
+        display: block;
+    }
+    .poster-wrap::after {
+        content: ""; position: absolute; inset: -2px; border-radius: 22px; z-index: -1;
+        background: linear-gradient(135deg, rgba(124,92,255,.55), rgba(73,208,255,.35));
+        filter: blur(14px); opacity: .55;
+    }
+    .hero-info { max-width: 480px; min-width: 280px; }
+    .pill {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 7px 15px; border-radius: 99px;
+        background: rgba(124,92,255,.14); border: 1px solid rgba(124,92,255,.3);
+        color: #c4b5ff; font-size: 11.5px; font-weight: 700;
+        letter-spacing: .08em; text-transform: uppercase;
+        margin-bottom: 18px;
+    }
+    .pill .live {
+        width: 7px; height: 7px; border-radius: 50%; background: var(--success);
+        box-shadow: 0 0 10px var(--success);
+        animation: pulse 1.8s infinite;
+    }
+    .hero-info h1 {
+        font-size: clamp(1.7rem, 4.5vw, 2.4rem);
+        font-weight: 800; letter-spacing: -.02em; line-height: 1.12;
+    }
+    .meta-row {
+        display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+        color: var(--muted); margin: 12px 0 16px; font-size: 13.5px;
+    }
+    .meta-row .badge {
+        padding: 4px 11px; border-radius: 8px; font-size: 12px; font-weight: 600;
+        background: rgba(255,255,255,.06); border: 1px solid var(--border);
+    }
+    .meta-row .badge.hot {
+        background: rgba(255,91,191,.12); border-color: rgba(255,91,191,.3); color: #ffb3dd;
+    }
+    .hero-info p.desc { color: var(--muted); line-height: 1.75; font-size: 15px; margin-bottom: 26px; }
 
-        /* default fallback hero (used when the owner has no custom design) */
-        .default-hero {
-            display: flex; align-items: center; justify-content: center; gap: 42px;
-            max-width: 880px; margin: 0 auto;
-            padding: 36px 20px 60px;
-            flex-wrap: wrap;
-        }
-        .default-hero .poster {
-            width: 210px; height: 300px; object-fit: cover; border-radius: 18px;
-            border: 1px solid var(--border);
-            box-shadow: 0 24px 48px -16px rgba(0, 0, 0, .65);
-            background: rgba(255, 255, 255, .04);
-        }
-        .default-info { max-width: 470px; min-width: 260px; }
-        .default-hero .pill {
-            display: inline-block; padding: 7px 14px; border-radius: 99px;
-            background: rgba(124, 92, 255, .14); border: 1px solid rgba(124, 92, 255, .28);
-            color: #c4b5ff; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-            margin-bottom: 18px;
-        }
-        .default-hero h1 { font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
-        .default-hero .meta { color: var(--muted); margin: 10px 0 14px; font-size: 14px; }
-        .default-hero p { color: var(--muted); line-height: 1.7; font-size: 15px; margin-bottom: 26px; }
-        @media (max-width: 640px) {
-            .default-hero { text-align: center; }
-            .default-info { min-width: 0; }
-        }
+    /* ---------- download options ---------- */
+    .dl-options { max-width: 900px; margin: 0 auto; padding: 0 24px 70px; animation: fadeUp .7s .2s ease both; }
+    .dl-options h2 {
+        font-size: 15px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+        color: var(--muted); margin-bottom: 16px;
+        display: flex; align-items: center; gap: 12px;
+    }
+    .dl-options h2::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+    .opt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+    .opt-card {
+        display: flex; align-items: center; justify-content: space-between; gap: 14px;
+        padding: 18px 20px; border-radius: 16px;
+        background: var(--surface); border: 1px solid var(--border);
+        cursor: pointer; transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    }
+    .opt-card:hover { transform: translateY(-3px); background: var(--surface-2); border-color: rgba(124,92,255,.4); }
+    .opt-card.active { border-color: var(--accent); background: rgba(124,92,255,.1); }
+    .opt-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .q-icon {
+        width: 42px; height: 42px; border-radius: 12px; flex: none;
+        background: linear-gradient(135deg, rgba(124,92,255,.25), rgba(73,208,255,.18));
+        border: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: center; font-size: 17px;
+    }
+    .opt-card strong { display: block; font-size: 15px; }
+    .opt-card .size { font-size: 12.5px; color: var(--muted); margin-top: 3px; display: block; }
+    .opt-check {
+        width: 22px; height: 22px; border-radius: 50%; flex: none;
+        border: 2px solid var(--border); position: relative; transition: .2s;
+    }
+    .opt-card.active .opt-check { border-color: var(--accent); background: var(--accent); }
+    .opt-card.active .opt-check::after {
+        content: "✓"; position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 800; color: #fff;
+    }
 
-        /* access denied / disabled panel */
-        .denied-wrap {
-            display: __DENIED_DISPLAY__;
-            align-items: center; justify-content: center;
-            padding: 48px 20px;
-        }
-        .denied-wrap .card {
-            max-width: 440px; width: 100%;
-            text-align: center;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 48px 36px;
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            box-shadow: 0 30px 60px -24px rgba(0, 0, 0, .6);
-        }
-        .denied-wrap .lock {
-            width: 68px; height: 68px; margin: 0 auto 20px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, rgba(124, 92, 255, .25), rgba(73, 208, 255, .18));
-            border: 1px solid var(--border);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 30px;
-        }
-        .denied-wrap h2 { font-size: 21px; margin-bottom: 10px; }
-        .denied-wrap p { color: var(--muted); font-size: 14.5px; line-height: 1.65; }
-        .denied-wrap .pub-link {
-            display: inline-flex; align-items: center; gap: 8px;
-            margin-top: 24px; padding: 11px 20px;
-            border-radius: 12px;
-            color: var(--text); text-decoration: none;
-            background: rgba(255, 255, 255, .06);
-            border: 1px solid var(--border);
-            font-size: 13.5px; font-weight: 600;
-            transition: .2s ease;
-        }
-        .denied-wrap .pub-link:hover { background: rgba(255, 255, 255, .11); transform: translateY(-1px); }
+    /* ---------- main download button ---------- */
+    .dl-btn {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 15px 30px; border-radius: 14px;
+        font-weight: 700; font-size: 15px; font-family: inherit;
+        border: none; cursor: pointer; color: #fff;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--pink) 130%);
+        box-shadow: 0 12px 30px -8px rgba(124,92,255,.55);
+        transition: transform .18s ease, box-shadow .18s ease;
+        white-space: nowrap;
+    }
+    .dl-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 38px -8px rgba(124,92,255,.7); }
+    .dl-btn:active { transform: translateY(0) scale(.98); }
+    .dl-btn:disabled { opacity: .7; cursor: wait; }
 
-        /* download buttons */
-        .dl-btn {
-            display: __BTN_DISPLAY__;
-            align-items: center; gap: 9px;
-            padding: 14px 26px;
-            border-radius: 13px;
-            font-weight: 700; font-size: 15px;
-            text-decoration: none;
-            color: #fff;
-            background: linear-gradient(135deg, var(--accent) 0%, #ff5bbf 130%);
-            box-shadow: 0 12px 30px -8px rgba(124, 92, 255, .55);
-            transition: transform .18s ease, box-shadow .18s ease;
-            white-space: nowrap;
-        }
-        .dl-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 36px -8px rgba(124, 92, 255, .7); }
-        .dl-btn:active { transform: translateY(0); }
+    /* ---------- progress ---------- */
+    .progress-wrap {
+        display: none; margin-top: 22px;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 16px; padding: 18px 20px;
+    }
+    .progress-wrap.show { display: block; animation: fadeUp .35s ease both; }
+    .progress-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .progress-top b { color: var(--text); }
+    .progress-track {
+        height: 9px; border-radius: 99px; overflow: hidden;
+        background: rgba(255,255,255,.07); border: 1px solid var(--border);
+    }
+    .progress-fill {
+        height: 100%; width: 0%; border-radius: 99px;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        box-shadow: 0 0 14px rgba(124,92,255,.6);
+        transition: width .25s ease;
+    }
+    .progress-done {
+        display: none; margin-top: 12px; font-size: 13.5px; color: var(--success); font-weight: 600;
+        align-items: center; gap: 8px;
+    }
+    .progress-done.show { display: flex; }
 
-        /* sticky footer download bar */
-        .dl-bar {
-            position: sticky; bottom: 0;
-            display: flex; align-items: center; gap: 16px;
-            justify-content: space-between; flex-wrap: wrap;
-            padding: 14px 24px;
-            background: rgba(14, 16, 24, .82);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-top: 1px solid var(--border);
-        }
-        .dl-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
-        .foot-thumb {
-            width: 46px; height: 60px; object-fit: cover; border-radius: 8px;
-            border: 1px solid var(--border); flex: none; background: rgba(255, 255, 255, .04);
-        }
-        .dl-info .meta { min-width: 0; }
-        .dl-info strong { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52vw; }
-        .dl-info .sub { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
-        .dl-note { display: __NOTE_DISPLAY__; font-size: 13px; color: var(--muted); }
-        .dl-bar .dl-btn { padding: 11px 22px; font-size: 14px; flex: none; }
+    /* ---------- access denied ---------- */
+    .denied-wrap { display: none; align-items: center; justify-content: center; padding: 48px 20px; }
+    .denied-wrap.show { display: flex; animation: fadeUp .5s ease both; }
+    .denied-wrap .card {
+        max-width: 450px; width: 100%; text-align: center;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 24px; padding: 48px 36px;
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 30px 60px -24px rgba(0,0,0,.6);
+    }
+    .denied-wrap .lock {
+        width: 70px; height: 70px; margin: 0 auto 20px; border-radius: 20px;
+        background: linear-gradient(135deg, rgba(124,92,255,.25), rgba(73,208,255,.18));
+        border: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: center; font-size: 30px;
+    }
+    .denied-wrap h2 { font-size: 21px; margin-bottom: 10px; }
+    .denied-wrap p { color: var(--muted); font-size: 14.5px; line-height: 1.65; }
+    .pub-link {
+        display: inline-flex; align-items: center; gap: 8px;
+        margin-top: 24px; padding: 11px 20px; border-radius: 12px;
+        color: var(--text); text-decoration: none;
+        background: rgba(255,255,255,.06); border: 1px solid var(--border);
+        font-size: 13.5px; font-weight: 600; transition: .2s ease;
+    }
+    .pub-link:hover { background: rgba(255,255,255,.11); transform: translateY(-1px); }
 
-        @media (max-width: 560px) {
-            .brand-head { padding: 16px; }
-            .dl-bar { flex-direction: column; align-items: stretch; text-align: center; }
-            .dl-info { justify-content: center; }
-            .dl-info strong { max-width: none; }
-            .dl-bar .dl-btn { justify-content: center; }
-        }
-    </style>
-    <style>__CUSTOM_CSS__</style>
+    /* ---------- sticky footer download bar ---------- */
+    .dl-bar {
+        position: sticky; bottom: 0; z-index: 20;
+        display: flex; align-items: center; gap: 16px;
+        justify-content: space-between; flex-wrap: wrap;
+        padding: 14px 24px;
+        background: rgba(12, 14, 22, .85);
+        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        border-top: 1px solid var(--border);
+    }
+    .dl-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .foot-thumb {
+        width: 46px; height: 62px; object-fit: cover; border-radius: 9px;
+        border: 1px solid var(--border); flex: none; background: rgba(255,255,255,.04);
+    }
+    .dl-info .meta { min-width: 0; }
+    .dl-info strong { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52vw; }
+    .dl-info .sub { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+    .dl-bar .dl-btn { padding: 11px 22px; font-size: 14px; flex: none; }
+
+    /* ---------- animations ---------- */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+    @media (max-width: 640px) {
+        .hero { text-align: center; gap: 30px; padding-top: 28px; }
+        .hero-info { min-width: 0; }
+        .meta-row { justify-content: center; }
+        .brand-head { padding: 16px; }
+        .dl-bar { flex-direction: column; align-items: stretch; text-align: center; }
+        .dl-info { justify-content: center; }
+        .dl-info strong { max-width: none; }
+        .dl-bar .dl-btn { justify-content: center; }
+    }
+</style>
+<base target="_blank">
 </head>
 <body>
     <div class="bg-glow"></div>
+    <div class="bg-grid"></div>
 
     <header class="brand-head">
         <span class="brand-logo"><span class="dot">▶</span> MyStore</span>
-        <a class="brand-powered" href="https://mystore.app/" onclick="return false">Powered by <b>MyStore</b></a>
+        <a class="brand-powered" href="#" onclick="return false">Powered by <b>MyStore</b></a>
     </header>
 
     <main class="dl-main">
-        <div class="design-body">
-            <div class="design-inner">__CUSTOM_BODY__</div>
-        </div>
-        <div class="denied-wrap">
+        <!-- ===== CONTENT VIEW (default) ===== -->
+        <section id="contentView">
+            <div class="hero">
+                <div class="poster-wrap">
+                    <img class="poster" src="https://mystore-1-tp7b.onrender.com/poster/poster_ec10de6e-4bfa-4219-9908-0efa26077a0f.jpg" alt="Moonfall Poster" onerror="this.src='https://via.placeholder.com/220x315/1a1d2e/7c5cff?text=Poster'">
+                </div>
+                <div class="hero-info">
+                    <span class="pill"><span class="live"></span> Available Now</span>
+                    <h1>Moonfall</h1>
+                    <div class="meta-row">
+                        <span class="badge hot">🔥 Trending</span>
+                        <span class="badge">Sci-Fi</span>
+                        <span class="badge">2022</span>
+                        <span>·</span><span>WEBM</span><span>·</span><span>Updated Sep 2026</span>
+                    </div>
+                    <p class="desc">A mysterious force knocks the Moon from its orbit around Earth and sends it hurtling on a collision course with life as we know it.</p>
+                    <button class="dl-btn" id="heroDlBtn" onclick="startDownload()">⬇ Download Movie</button>
+                </div>
+            </div>
+
+            <div class="dl-options">
+                <h2>Choose Quality</h2>
+                <div class="opt-grid">
+                    <div class="opt-card" data-quality="480p" data-size="450 MB" onclick="selectQuality(this)">
+                        <div class="opt-left"><div class="q-icon">📱</div><div><strong>480p SD</strong><span class="size">450 MB · Good for mobile</span></div></div>
+                        <span class="opt-check"></span>
+                    </div>
+                    <div class="opt-card active" data-quality="720p" data-size="950 MB" onclick="selectQuality(this)">
+                        <div class="opt-left"><div class="q-icon">💻</div><div><strong>720p HD</strong><span class="size">950 MB · Recommended</span></div></div>
+                        <span class="opt-check"></span>
+                    </div>
+                    <div class="opt-card" data-quality="1080p" data-size="1.8 GB" onclick="selectQuality(this)">
+                        <div class="opt-left"><div class="q-icon">🖥️</div><div><strong>1080p Full HD</strong><span class="size">1.8 GB · Best quality</span></div></div>
+                        <span class="opt-check"></span>
+                    </div>
+                </div>
+
+                <div class="progress-wrap" id="progressWrap">
+                    <div class="progress-top">
+                        <span>Downloading <b id="progQuality">720p</b>...</span>
+                        <span><b id="progPercent">0%</b> of <span id="progSize">950 MB</span></span>
+                    </div>
+                    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+                    <div class="progress-done" id="progressDone">✅ Download complete — check your downloads folder.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== ACCESS DENIED VIEW (set ACCESS_DENIED = true in script) ===== -->
+        <div class="denied-wrap" id="deniedView">
             <div class="card">
                 <div class="lock">🔒</div>
-                <h2>__DENIED_TITLE__</h2>
-                <p>__DENIED_MSG__</p>
-                <a class="pub-link" href="https://mystore.app/" onclick="return false">⬆ Powered by MyStore</a>
+                <h2>Access restricted</h2>
+                <p>Only people the owner approves can download this movie. Ask the owner to add your email.</p>
+                <a class="pub-link" href="#" onclick="return false">⬆ Powered by MyStore</a>
             </div>
         </div>
     </main>
 
     <footer class="dl-bar">
         <div class="dl-info">
-            <img class="foot-thumb" src="__POSTER_URL__" alt="" onerror="this.style.display='none'">
+            <img class="foot-thumb" src="https://mystore-1-tp7b.onrender.com/poster/poster_ec10de6e-4bfa-4219-9908-0efa26077a0f.jpg" alt="" onerror="this.style.display='none'">
             <div class="meta">
-                <strong>__TITLE__</strong>
-                <span class="sub"><span>__GENRE__</span><span>·</span><span>__YEAR__</span><span>·</span><span>__FILE_INFO__</span></span>
+                <strong>Moonfall</strong>
+                <span class="sub"><span id="footQuality">720p</span><span>·</span><span>WEBM</span><span>·</span><span id="footSize">950 MB</span></span>
             </div>
         </div>
-        <span class="dl-note">__FOOTER_NOTE__</span>
-        <a class="dl-btn" href="__DOWNLOAD_URL__" download="__FILENAME__" rel="noopener nofollow">⬇ Download __FILENAME__</a>
+        <button class="dl-btn" onclick="startDownload()">⬇ Download <span id="barSize">950 MB</span></button>
     </footer>
+
+<script>
+    /* ===== CONFIG ===== */
+    const ACCESS_DENIED = false;                       // flip to true to show the restricted panel
+    const FILE_URL = "https://mystore-1-tp7b.onrender.com/download/2c799c8bf9b4f76d439b335cb08c4a5acc0c0ddd845aace2";
+
+    if (ACCESS_DENIED) {
+        document.getElementById('contentView').style.display = 'none';
+        document.getElementById('deniedView').classList.add('show');
+    }
+
+    let selected = { quality: '720p', size: '950 MB' };
+
+    function selectQuality(card) {
+        document.querySelectorAll('.opt-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        selected.quality = card.dataset.quality;
+        selected.size = card.dataset.size;
+        document.getElementById('footQuality').textContent = selected.quality;
+        document.getElementById('footSize').textContent = selected.size;
+        document.getElementById('barSize').textContent = selected.size;
+    }
+
+    function startDownload() {
+        const wrap = document.getElementById('progressWrap');
+        const fill = document.getElementById('progressFill');
+        const pct  = document.getElementById('progPercent');
+        const q    = document.getElementById('progQuality');
+        const s    = document.getElementById('progSize');
+        const done = document.getElementById('progressDone');
+
+        wrap.classList.add('show');
+        done.classList.remove('show');
+        q.textContent = selected.quality;
+        s.textContent = selected.size;
+        fill.style.width = '0%';
+        pct.textContent = '0%';
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // simulated progress, then trigger the real file download
+        let p = 0;
+        const timer = setInterval(() => {
+            p += Math.random() * 12 + 4;
+            if (p >= 100) {
+                p = 100;
+                clearInterval(timer);
+                done.classList.add('show');
+                const a = document.createElement('a');
+                a.href = FILE_URL;
+                a.download = 'moonfall-' + selected.quality + '.webm';
+                a.rel = 'noopener nofollow';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }
+            fill.style.width = p + '%';
+            pct.textContent = Math.floor(p) + '%';
+        }, 220);
+    }
+</script>
 </body>
 </html>

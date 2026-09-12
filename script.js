@@ -597,32 +597,9 @@ if (uploadForm) {
     submitBtn.innerText = 'Uploading...';
 
     try {
-      // 0) Optional client-side compression
-      let toUpload = videoFile;
-      let uploadName = videoFile.name;
-      const compressCb = document.getElementById('compress-video');
-      if (compressCb && compressCb.checked && window.MediaRecorder) {
-        const compRow = document.getElementById('compress-progress-row');
-        const compFill = document.getElementById('compress-progress');
-        const compText = document.getElementById('compress-progress-text');
-        compRow.style.display = 'flex';
-        submitBtn.innerText = 'Compressing...';
-        try {
-          toUpload = await compressVideoToWebM(videoFile, document.getElementById('compress-quality').value, (pct) => {
-            compFill.style.width = pct + '%';
-            compText.textContent = pct + '%';
-          });
-          const base = (videoFile.name || 'video').replace(/\.[^.]+$/, '');
-          uploadName = base + '.webm';
-        } catch (err) {
-          compRow.style.display = 'none';
-          toUpload = videoFile;
-        }
-      }
-
-      // 1) Upload video (streamed to local disk)
+      // 1) Upload video (streamed to local disk) — always the original file, format never changes
       document.getElementById('video-progress-row').style.display = 'flex';
-      const videoResult = await uploadWithProgress(toUpload, `${API_BASE_URL}/upload/video`, document.getElementById('video-progress'), document.getElementById('video-progress-text'), uploadName);
+      const videoResult = await uploadWithProgress(videoFile, `${API_BASE_URL}/upload/video`, document.getElementById('video-progress'), document.getElementById('video-progress-text'), videoFile.name);
       if (!videoResult.ok) {
         const data = JSON.parse(videoResult.response || '{}');
         throw new Error(data.error || 'Video upload failed');
@@ -717,103 +694,7 @@ function uploadWithProgress(file, url, progressEl, textEl, name) {
 
 function compressVideoToWebM(file, quality, onProgress) {
   return new Promise((resolve, reject) => {
-    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
-      return reject(new Error('Compression is not supported in this browser.'));
-    }
-
-    const settings = {
-      fast: { maxW: 854, maxH: 480, vbps: 900000, abps: 64000 },
-      good: { maxW: 1280, maxH: 720, vbps: 1800000, abps: 96000 },
-      best: { maxW: 1920, maxH: 1080, vbps: 3500000, abps: 128000 }
-    }[quality] || { maxW: 1280, maxH: 720, vbps: 1800000, abps: 96000 };
-
-    const url = URL.createObjectURL(file);
-    const video = document.createElement('video');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    let stream = null;
-    let recorder = null;
-    let running = true;
-    const chunks = [];
-
-    canvas.width = 2;
-    canvas.height = 2;
-
-    const cleanup = () => {
-      running = false;
-      URL.revokeObjectURL(url);
-      video.removeAttribute('src');
-      video.load();
-      if (stream) stream.getTracks().forEach(t => t.stop());
-    };
-
-    video.setAttribute('playsinline', '');
-    video.preload = 'metadata';
-
-    video.onloadedmetadata = () => {
-      const scale = Math.min(1, settings.maxW / video.videoWidth, settings.maxH / video.videoHeight);
-      canvas.width = Math.max(2, Math.round(video.videoWidth * scale));
-      canvas.height = Math.max(2, Math.round(video.videoHeight * scale));
-
-      let recStream;
-      try {
-        recStream = canvas.captureStream(30);
-      } catch (e) {
-        cleanup();
-        return reject(e);
-      }
-
-      // Capture the audio track straight from the media element so sound is always
-      // preserved in the compressed file (avoids silent/suspended AudioContext).
-      try {
-        const elementStream = video.captureStream
-          ? video.captureStream()
-          : video.mozCaptureStream ? video.mozCaptureStream() : null;
-        if (elementStream) {
-          elementStream.getAudioTracks().forEach(t => recStream.addTrack(t));
-          elementStream.getVideoTracks().forEach(t => t.stop());
-        }
-      } catch (e) { /* audio capture may be limited in some browsers */ }
-
-      const mime = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
-        .find(t => MediaRecorder.isTypeSupported(t)) || '';
-      try {
-        recorder = new MediaRecorder(recStream, { mimeType: mime, videoBitsPerSecond: settings.vbps, audioBitsPerSecond: settings.abps });
-      } catch (e) {
-        cleanup();
-        return reject(e);
-      }
-      stream = recStream;
-
-      recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: mime || 'video/webm' });
-        cleanup();
-        resolve(blob);
-      };
-      recorder.start(1000);
-
-      const drawLoop = () => {
-        if (!running) return;
-        if (video.ended) { if (recorder && recorder.state !== 'inactive') recorder.stop(); return; }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        if (typeof onProgress === 'function' && video.duration) {
-          onProgress(Math.min(99, Math.round((video.currentTime / video.duration) * 100)));
-        }
-        requestAnimationFrame(drawLoop);
-      };
-
-      video.play().catch(() => {});
-      requestAnimationFrame(drawLoop);
-    };
-
-    video.onerror = () => {
-      cleanup();
-      reject(new Error('Could not read the video file.'));
-    };
-
-    video.src = url;
-    video.load();
+    reject(new Error('Compression is not supported. Videos keep their original format.'));
   });
 }
 
