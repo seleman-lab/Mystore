@@ -72,7 +72,7 @@ const getTransporter = async () => {
 const sessions = {};
 
 // --- JSON Database Helpers ---
-const readJSON = (file) => JSON.parse(fs.readFileSync(file, 'utf8') || '[]');
+const readJSON = (file) => JSON.parse((fs.readFileSync(file, 'utf8') || '[]').replace(/^\uFEFF/, ''));
 const writeJSON = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2));
 
 // --- Security & Validation Helpers ---
