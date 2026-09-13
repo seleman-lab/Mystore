@@ -120,9 +120,28 @@ const server = http.createServer(async (req, res) => {
         return res.end();
     }
 
-    // =================== HEALTH CHECK ===================
-    if (method === 'GET' && urlPath === '/api/health') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+    // =================== ROOT / HEALTH CHECK ===================
+    if (method === 'GET' && (urlPath === '/' || urlPath === '/api/health')) {
+        const isRoot = urlPath === '/';
+        res.writeHead(200, { 'Content-Type': isRoot ? 'text/html' : 'application/json' });
+        if (isRoot) {
+            return res.end(`<!DOCTYPE html><html><head><title>MyStore Video Server</title>
+<style>body{font-family:system-ui;max-width:600px;margin:40px auto;padding:20px;background:#111;color:#fff;}
+h1{color:#e50914;}code{background:#222;padding:2px 6px;border-radius:4px;font-size:14px;}
+a{color:#e50914;}</style></head><body>
+<h1>MyStore Video Storage Server</h1>
+<p>Server is running. This is the storage backend for your MyStore video website.</p>
+<h3>API Endpoints:</h3>
+<ul>
+<li><a href="/api/health"><code>GET /api/health</code></a> - Health check (JSON)</li>
+<li><code>POST /api/upload</code> - Upload files (requires upload token)</li>
+<li><code>GET /api/stream/:filename</code> - Stream video with Range support</li>
+<li><code>GET /api/file/:filename</code> - Serve poster/sticker images</li>
+<li><code>GET /api/download/:filename</code> - Download video file</li>
+</ul>
+<p><small>Do not upload files directly through this page. Use the MyStore website.</small></p>
+</body></html>`);
+        }
         return res.end(JSON.stringify({ status: 'ok', storageDir: STORAGE_DIR, timestamp: new Date().toISOString() }));
     }
 
