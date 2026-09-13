@@ -300,7 +300,7 @@ const publicMovie = (m, origin) => {
         streamUrl: `${base}${apiPrefix}${streamPath}`,
         embedUrl: `${(origin || '')}/embed/${m.streamToken}`,
         downloadPageUrl: `${(origin || '')}/download-page/${m.id}`,
-        downloadUrl: `${base}${apiPrefix}/download/${m.videoFile}`,
+        downloadUrl: `${base}${apiPrefix}/download/${m.videoFile}${isVideoServer ? '?title=' + encodeURIComponent(m.title || 'movie') : ''}`,
         downloadEnabled: (m.downloadAccess || 'none') !== 'none'
     };
 };
@@ -1076,18 +1076,24 @@ const server = http.createServer(async (req, res) => {
             const fileInfo = `${formatBytes(stats ? stats.size : 0)}${stats ? ' · ' + ext.replace('.', '').toUpperCase() : ''}`;
 
             let dbHtml = sanitizeDesignHtml(movie.downloadPageHtml || '');
-            const dbBtn = `<a class="dl-btn" href="${videoBase}${videoApi}/download/${movie.videoFile}" rel="noopener nofollow">⬇ Download Movie</a>`;
+            const dlBtnUrl = movieIsVideoServer
+                ? `${videoBase}${videoApi}/download/${movie.videoFile}?title=${encodeURIComponent(movie.title || 'movie')}`
+                : `${videoBase}${videoApi}/download/${movie.videoFile}`;
+            const dbBtn = `<a class="dl-btn" href="${dlBtnUrl}" rel="noopener nofollow">⬇ Download Movie</a>`;
+            const posterPath = movieIsVideoServer ? `/file/${movie.posterFile}` : `/poster/${movie.posterFile}`;
+            const brandPath = movieIsVideoServer ? `/file/${movie.brandFile}` : `/poster/${movie.brandFile}`;
             dbHtml = dbHtml
                 .split('{{TITLE}}').join(movie.title || '')
-                .split('{{POSTER}}').join(movie.posterFile ? `${videoBase}${videoApi}/file/${movie.posterFile}` : '')
-                .split('{{BRAND}}').join(movie.brandFile ? `${videoBase}${videoApi}/file/${movie.brandFile}` : '')
+                .split('{{POSTER}}').join(movie.posterFile ? `${videoBase}${videoApi}${posterPath}` : '')
+                .split('{{BRAND}}').join(movie.brandFile ? `${videoBase}${videoApi}${brandPath}` : '')
                 .split('{{DESCRIPTION}}').join(movie.description || '')
                 .split('{{GENRE}}').join(movie.genre || '')
                 .split('{{YEAR}}').join(movie.year ? String(movie.year) : '')
                 .split('{{DOWNLOAD_BUTTON}}').join(dbBtn);
 
             if (!dbHtml.trim()) {
-                const posterSrc = movie.posterFile ? `${videoBase}${videoApi}/file/${movie.posterFile}` : '';
+                const posterPath = movieIsVideoServer ? `/file/${movie.posterFile}` : `/poster/${movie.posterFile}`;
+                const posterSrc = movie.posterFile ? `${videoBase}${videoApi}${posterPath}` : '';
                 dbHtml = `
                     <div class="default-hero">
                         ${movie.posterFile ? `<img class="poster" src="${posterSrc}" alt="${movie.title || 'Poster'}">` : ''}
@@ -1109,8 +1115,8 @@ const server = http.createServer(async (req, res) => {
                 .replace(/__PAGE_TITLE__/g, `Download ${movie.title}`)
                 .replace(/__CUSTOM_CSS__/g, movie.downloadPageCss || '')
                 .replace(/__CUSTOM_BODY__/g, dbHtml)
-                .replace(/__POSTER_URL__/g, () => movie.posterFile ? `${videoBase}${videoApi}/file/${movie.posterFile}` : '')
-                .replace(/__BRAND_URL__/g, () => movie.brandFile ? `${videoBase}${videoApi}/file/${movie.brandFile}` : '')
+                .replace(/__POSTER_URL__/g, () => movie.posterFile ? `${videoBase}${videoApi}${movieIsVideoServer ? '/file/' + movie.posterFile : '/poster/' + movie.posterFile}` : '')
+                .replace(/__BRAND_URL__/g, () => movie.brandFile ? `${videoBase}${videoApi}${movieIsVideoServer ? '/file/' + movie.brandFile : '/poster/' + movie.brandFile}` : '')
                 .replace(/__DESCRIPTION__/g, () => movie.description || '')
                 .replace(/__GENRE__/g, () => movie.genre || 'Other')
                 .replace(/__YEAR__/g, () => movie.year ? String(movie.year) : '—')
@@ -1126,7 +1132,9 @@ const server = http.createServer(async (req, res) => {
                 .replace(/__FOOTER_NOTE__/g, (!denied && disabled) ? 'Downloads are disabled by the owner.' : '')
                 .replace(/__TITLE__/g, () => movie.title || '')
                 .replace(/__FILE_INFO__/g, fileInfo)
-                .replace(/__DOWNLOAD_URL__/g, `${videoBase}${videoApi}/download/${movie.videoFile}`)
+                .replace(/__DOWNLOAD_URL__/g, movieIsVideoServer
+                    ? `${videoBase}${videoApi}/download/${movie.videoFile}?title=${encodeURIComponent(movie.title || 'movie')}`
+                    : `${videoBase}${videoApi}/download/${movie.videoFile}`)
                 .replace(/__FILENAME__/g, filename);
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.end(html);
@@ -1141,7 +1149,7 @@ const server = http.createServer(async (req, res) => {
         try {
             const token = pathName.split('/')[2]?.split('?')[0];
             const movies = readJSON(MOVIES_FILE);
-            const movie = movies.find(m => m.streamToken === token);
+            const movie = movies.find(m => m.videoFile === token || m.streamToken === token);
             if (!movie) {
                 res.writeHead(404, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "Movie not found" }));
@@ -1151,6 +1159,14 @@ const server = http.createServer(async (req, res) => {
             if (!canDownloadMovie(movie, email)) {
                 res.writeHead(403, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ error: "You do not have permission to download this movie" }));
+            }
+
+            const movieIsVideoServer = movie.videoStorage === 'video_server' || (!movie.videoStorage && USE_VIDEO_SERVER);
+            if (movieIsVideoServer) {
+                const videoFileName = encodeURIComponent(movie.videoFile);
+                const redirectUrl = `${VIDEO_SERVER_URL}/api/download/${videoFileName}`;
+                res.writeHead(302, { 'Location': redirectUrl });
+                return res.end();
             }
 
             const filePath = path.join(MOVIES_DIR, movie.videoFile);

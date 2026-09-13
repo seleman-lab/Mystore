@@ -293,7 +293,8 @@ a{color:#e50914;}</style></head><body>
 
     // =================== DOWNLOAD FILE ===================
     if (method === 'GET' && urlPath.startsWith('/api/download/')) {
-        const filename = decodeURIComponent(urlPath.split('/')[3]?.split('?')[0] || '');
+        const parts = urlPath.split('?');
+        const filename = decodeURIComponent(parts[0].split('/')[3]?.split('?')[0] || '');
         const filePath = safePath(filename);
 
         if (!filePath || !fs.existsSync(filePath)) {
@@ -305,8 +306,9 @@ a{color:#e50914;}</style></head><body>
         const contentType = mimeTypes[ext] || 'application/octet-stream';
         const stats = fs.statSync(filePath);
 
-        // Safe download name (strip UUID prefix for user-friendly name)
-        const safeTitle = 'movie';
+        const qs = new URLSearchParams(parts[1] || '');
+        const rawTitle = qs.get('title') || 'movie';
+        const safeTitle = rawTitle.replace(/[^\w\- ]+/g, '').trim() || 'movie';
         const downloadName = `${safeTitle}${ext}`;
 
         res.writeHead(200, {
