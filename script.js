@@ -597,9 +597,41 @@ if (uploadForm) {
     submitBtn.innerText = 'Uploading...';
 
     try {
+      // Determine if video server is available
+      let uploadUrl = `${API_BASE_URL}/upload/video`;
+      let uploadHeaders = {};
+      let useVideoServer = false;
+
+      try {
+        const tokenRes = await fetch(`${API_BASE_URL}/api/upload/request`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          if (tokenData.token && tokenData.uploadUrl) {
+            uploadUrl = `${tokenData.uploadUrl}/api/upload`;
+            uploadHeaders = {
+              'X-Upload-Token': tokenData.token,
+              'X-File-Type': 'video',
+              '_uploadUrl': tokenData.uploadUrl  // Internal: reused for poster/sticker
+            };
+            useVideoServer = true;
+          }
+        }
+      } catch (e) {
+        // Fall back to legacy upload if video server not available
+      }
+
       // 1) Upload video (streamed to local disk) — always the original file, format never changes
       document.getElementById('video-progress-row').style.display = 'flex';
-      const videoResult = await uploadWithProgress(videoFile, `${API_BASE_URL}/upload/video`, document.getElementById('video-progress'), document.getElementById('video-progress-text'), videoFile.name);
+      const videoResult = await uploadWithProgress(
+        videoFile, uploadUrl,
+        document.getElementById('video-progress'),
+        document.getElementById('video-progress-text'),
+        videoFile.name,
+        useVideoServer ? uploadHeaders : undefined
+      );
       if (!videoResult.ok) {
         const data = JSON.parse(videoResult.response || '{}');
         throw new Error(data.error || 'Video upload failed');
@@ -609,7 +641,17 @@ if (uploadForm) {
       // 2) Optional poster
       let posterFileResult = null;
       if (posterFile) {
-        const posterResult = await uploadWithProgress(posterFile, `${API_BASE_URL}/upload/poster`, null, null);
+        let posterUrl = `${API_BASE_URL}/upload/poster`;
+        let posterHeaders = undefined;
+        if (useVideoServer) {
+          // Reuse the upload URL and token (valid for 1 hour)
+          posterUrl = `${uploadHeaders._uploadUrl}/api/upload`;
+          posterHeaders = {
+            'X-Upload-Token': uploadHeaders['X-Upload-Token'],
+            'X-File-Type': 'poster'
+          };
+        }
+        const posterResult = await uploadWithProgress(posterFile, posterUrl, null, null, posterFile.name, posterHeaders);
         if (!posterResult.ok) {
           const data = JSON.parse(posterResult.response || '{}');
           throw new Error(data.error || 'Poster upload failed');
@@ -620,7 +662,16 @@ if (uploadForm) {
       // 2b) Optional custom sticker
       let stickerFileResult = null;
       if (stickerFile) {
-        const stickerResult = await uploadWithProgress(stickerFile, `${API_BASE_URL}/upload/brand`, null, null);
+        let stickerUrl = `${API_BASE_URL}/upload/brand`;
+        let stickerHeaders = undefined;
+        if (useVideoServer) {
+          stickerUrl = `${uploadHeaders._uploadUrl}/api/upload`;
+          stickerHeaders = {
+            'X-Upload-Token': uploadHeaders['X-Upload-Token'],
+            'X-File-Type': 'brand'
+          };
+        }
+        const stickerResult = await uploadWithProgress(stickerFile, stickerUrl, null, null, stickerFile.name, stickerHeaders);
         if (!stickerResult.ok) {
           const data = JSON.parse(stickerResult.response || '{}');
           throw new Error(data.error || 'Sticker upload failed');
@@ -638,9 +689,10 @@ if (uploadForm) {
           description: document.getElementById('m-desc-input').value.trim(),
           genre: document.getElementById('m-genre-input').value,
           year: document.getElementById('m-year-input').value,
-          videoFile: vidData.videoFile,
-          posterFile: posterFileResult ? posterFileResult.posterFile : null,
-          brandFile: stickerFileResult ? stickerFileResult.brandFile : null,
+          videoFile: vidData.filename || vidData.videoFile,
+          posterFile: posterFileResult ? (posterFileResult.filename || posterFileResult.posterFile) : null,
+          brandFile: stickerFileResult ? (stickerFileResult.filename || stickerFileResult.brandFile) : null,
+          videoSize: vidData.size || videoFile.size,
           downloadAccess: dlEnabled && dlEnabled.checked ? dlAccess.value : 'none',
           downloadAllowedEmails: document.getElementById('download-emails').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).slice(0, 100),
           downloadPageHtml: document.getElementById('dl-html').value,
@@ -671,18 +723,61 @@ if (uploadForm) {
   });
 }
 
-function uploadWithProgress(file, url, progressEl, textEl, name) {
+function uploadWithProgress(file, url, progressEl, textEl, name, extraHeaders) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url);
     xhr.setRequestHeader('X-File-Name', encodeURIComponent(name || file.name));
-    xhr.withCredentials = true;
+    if (extraHeaders) {
+      for (const [key, val] of Object.entries(extraHeaders)) {
+        if (!key.startsWith('_')) {  // Skip internal properties
+          xhr.setRequestHeader(key, val);
+        }
+      }
+    }
+    xhr.withCredentials = !extraHeaders || !extraHeaders['X-Upload-Token'];
+
+    let startTime = Date.now();
+    let lastLoaded = 0;
+    let lastTime = startTime;
 
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable && progressEl) {
         const pct = Math.round((e.loaded / e.total) * 100);
         progressEl.style.width = pct + '%';
-        if (textEl) textEl.textContent = pct + '%';
+
+        const now = Date.now();
+        const elapsed = (now - startTime) / 1000;
+        const loadedMB = (e.loaded / (1024 * 1024)).toFixed(1);
+        const totalMB = (e.total / (1024 * 1024)).toFixed(1);
+
+        // Calculate speed (update every 500ms to avoid flicker)
+        let speedText = '';
+        let etaText = '';
+        if (now - lastTime > 500 || e.loaded === e.total) {
+          const speed = (e.loaded - lastLoaded) / ((now - lastTime) / 1000);
+          lastLoaded = e.loaded;
+          lastTime = now;
+
+          if (speed > 0 && e.loaded < e.total) {
+            const remaining = (e.total - e.loaded) / speed;
+            const rMin = Math.floor(remaining / 60);
+            const rSec = Math.floor(remaining % 60);
+            etaText = rMin > 0 ? `${rMin}m ${rSec}s` : `${rSec}s`;
+          }
+
+          if (speed > 1024 * 1024) {
+            speedText = (speed / (1024 * 1024)).toFixed(1) + ' MB/s';
+          } else if (speed > 1024) {
+            speedText = (speed / 1024).toFixed(0) + ' KB/s';
+          } else {
+            speedText = Math.round(speed) + ' B/s';
+          }
+        }
+
+        if (textEl) {
+          textEl.textContent = `${pct}% · ${loadedMB}/${totalMB} MB${speedText ? ' · ' + speedText : ''}${etaText ? ' · ETA ' + etaText : ''}`;
+        }
       }
     });
 

@@ -20,6 +20,13 @@ const STORAGE_LIMIT = 20 * 1024 * 1024 * 1024; // 20 GB per user
 const MAX_VIDEO_SIZE = 5 * 1024 * 1024 * 1024; // 5 GB per movie
 const MAX_POSTER_SIZE = 10 * 1024 * 1024;       // 10 MB per poster
 
+// Video server configuration (local PC via Cloudflare Tunnel)
+const VIDEO_SERVER_URL = process.env.VIDEO_SERVER_URL || '';
+const VIDEO_SERVER_INTERNAL_URL = process.env.VIDEO_SERVER_INTERNAL_URL || VIDEO_SERVER_URL;
+const VIDEO_SERVER_API_KEY = process.env.VIDEO_SERVER_API_KEY || '';
+const UPLOAD_TOKEN_SECRET = process.env.UPLOAD_TOKEN_SECRET || '';
+const USE_VIDEO_SERVER = !!VIDEO_SERVER_URL;
+
 // Frontend URLs for CORS
 const FRONTEND_URLS = [
     'http://localhost:3000',
@@ -93,6 +100,58 @@ const hashPassword = (password) => {
 const verifyPassword = (password, hash, salt) => {
     const verifyHash = crypto.scryptSync(password, salt, 64).toString('hex');
     return verifyHash === hash;
+};
+
+// --- Upload Token (HMAC-SHA256 JWT) ---
+const signUploadToken = (email) => {
+    if (!UPLOAD_TOKEN_SECRET) return null;
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+        email,
+        iat: Date.now(),
+        exp: Date.now() + 60 * 60 * 1000, // 1 hour expiry
+        jti: crypto.randomUUID()
+    })).toString('base64url');
+    const signature = crypto.createHmac('sha256', UPLOAD_TOKEN_SECRET)
+        .update(`${header}.${payload}`)
+        .digest('base64url');
+    return `${header}.${payload}.${signature}`;
+};
+
+// Helper: make HTTP request to video server
+const videoServerRequest = (method, urlPath, apiKey, body) => {
+    return new Promise((resolve, reject) => {
+        const url = new URL(urlPath, VIDEO_SERVER_INTERNAL_URL);
+        const options = {
+            hostname: url.hostname,
+            port: url.port || (url.protocol === 'https:' ? 443 : 80),
+            path: url.pathname + url.search,
+            method,
+            headers: {}
+        };
+        if (apiKey) options.headers['X-API-Key'] = apiKey;
+        if (body) {
+            const bodyStr = JSON.stringify(body);
+            options.headers['Content-Type'] = 'application/json';
+            options.headers['Content-Length'] = Buffer.byteLength(bodyStr);
+        }
+
+        const proto = url.protocol === 'https:' ? require('https') : http;
+        const req = proto.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    resolve({ status: res.statusCode, data: JSON.parse(data) });
+                } catch (e) {
+                    resolve({ status: res.statusCode, data: { raw: data } });
+                }
+            });
+        });
+        req.on('error', reject);
+        if (body) req.write(JSON.stringify(body));
+        req.end();
+    });
 };
 
 // --- OTP Generation & Verification ---
@@ -211,7 +270,8 @@ const mimeTypes = {
 
 // --- Movie helpers ---
 const publicMovie = (m, origin) => {
-    const base = origin || '';
+    const base = USE_VIDEO_SERVER ? VIDEO_SERVER_URL : (origin || '');
+    const apiPrefix = USE_VIDEO_SERVER ? '/api' : '';
     return {
         id: m.id,
         title: m.title,
@@ -221,12 +281,13 @@ const publicMovie = (m, origin) => {
         duration: m.duration || null,
         uploadDate: m.uploadDate,
         views: m.views || 0,
-        posterUrl: m.posterFile ? `${base}/poster/${m.posterFile}` : null,
-        brandUrl: m.brandFile ? `${base}/poster/${m.brandFile}` : null,
-        streamUrl: `${base}/stream/${m.streamToken}`,
-        embedUrl: `${base}/embed/${m.streamToken}`,
-        downloadPageUrl: `${base}/download-page/${m.id}`,
-        downloadUrl: `${base}/download/${m.streamToken}`,
+        videoSize: m.videoSize || null,
+        posterUrl: m.posterFile ? `${base}${apiPrefix}/file/${m.posterFile}` : null,
+        brandUrl: m.brandFile ? `${base}${apiPrefix}/file/${m.brandFile}` : null,
+        streamUrl: `${base}${apiPrefix}/stream/${m.videoFile}`,
+        embedUrl: `${(origin || '')}/embed/${m.streamToken}`,
+        downloadPageUrl: `${(origin || '')}/download-page/${m.id}`,
+        downloadUrl: `${base}${apiPrefix}/download/${m.videoFile}`,
         downloadEnabled: (m.downloadAccess || 'none') !== 'none'
     };
 };
@@ -587,7 +648,40 @@ const server = http.createServer(async (req, res) => {
     }
 
 
-    // =================== MOVIE UPLOADS ===================
+    // =================== UPLOAD TOKEN (for video server) ===================
+    else if (method === 'POST' && pathName === '/api/upload/request') {
+        try {
+            const email = getSessionEmail(req);
+            if (!email) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Unauthorized. Please log in." }));
+            }
+
+            if (!USE_VIDEO_SERVER) {
+                res.writeHead(503, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Video server not configured" }));
+            }
+
+            const token = signUploadToken(email);
+            if (!token) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: "Failed to generate upload token" }));
+            }
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                token,
+                uploadUrl: VIDEO_SERVER_URL,
+                expiresIn: 3600
+            }));
+        } catch (error) {
+            console.error("Upload request error:", error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Internal Server Error" }));
+        }
+    }
+
+    // =================== MOVIE UPLOADS (legacy local mode) ===================
     else if (method === 'POST' && pathName === '/upload/video') {
         try {
             const email = getSessionEmail(req);
@@ -687,7 +781,7 @@ const server = http.createServer(async (req, res) => {
             }
 
             const body = await parseBody(req);
-            const { title, description, genre, year, videoFile, posterFile, brandFile, downloadAccess, downloadAllowedEmails, downloadPageHtml, downloadPageCss } = body;
+            const { title, description, genre, year, videoFile, posterFile, brandFile, videoSize, downloadAccess, downloadAllowedEmails, downloadPageHtml, downloadPageCss } = body;
 
             if (!title || !videoFile) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -695,10 +789,14 @@ const server = http.createServer(async (req, res) => {
             }
 
             const safeVideo = path.basename(videoFile);
-            const videoAbs = path.join(MOVIES_DIR, safeVideo);
-            if (!fs.existsSync(videoAbs)) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Video file was not found on server" }));
+
+            // When using video server, file is on the local PC, not on Render
+            if (!USE_VIDEO_SERVER) {
+                const videoAbs = path.join(MOVIES_DIR, safeVideo);
+                if (!fs.existsSync(videoAbs)) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({ error: "Video file was not found on server" }));
+                }
             }
 
             const movie = {
@@ -710,6 +808,7 @@ const server = http.createServer(async (req, res) => {
                 videoFile: safeVideo,
                 posterFile: posterFile ? path.basename(posterFile) : null,
                 brandFile: brandFile ? path.basename(brandFile) : null,
+                videoSize: typeof videoSize === 'number' ? videoSize : null,
                 userEmail: email,
                 uploadDate: new Date().toISOString(),
                 views: 0,
@@ -805,9 +904,20 @@ const server = http.createServer(async (req, res) => {
             const [movie] = movies.splice(idx, 1);
             writeJSON(MOVIES_FILE, movies);
 
-            for (const f of [movie.videoFile, movie.posterFile]) {
-                if (f) {
-                    const fp = path.join(MOVIES_DIR, path.basename(f));
+            // Delete files from video server or local disk
+            for (const f of [movie.videoFile, movie.posterFile, movie.brandFile]) {
+                if (!f) continue;
+                const safeName = path.basename(f);
+                if (USE_VIDEO_SERVER) {
+                    // Delete from video server via API
+                    try {
+                        await videoServerRequest('DELETE', `/api/file/${encodeURIComponent(safeName)}`, VIDEO_SERVER_API_KEY);
+                    } catch (e) {
+                        console.error(`Failed to delete ${safeName} from video server:`, e.message);
+                    }
+                } else {
+                    // Delete from local movies directory
+                    const fp = path.join(MOVIES_DIR, safeName);
                     if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
                 }
             }
@@ -921,27 +1031,39 @@ const server = http.createServer(async (req, res) => {
             if (access === 'permission') allowed = isOwner || isAllowed;
             if (access === 'none') allowed = !!isOwner;
 
-            const filePath = path.join(MOVIES_DIR, movie.videoFile);
-            const fileExists = fs.existsSync(filePath);
-            const stats = fileExists ? fs.statSync(filePath) : null;
-            const ext = fileExists ? path.extname(filePath).toLowerCase() : '.mp4';
+            const videoBase = USE_VIDEO_SERVER ? VIDEO_SERVER_URL : origin;
+            const videoApi = USE_VIDEO_SERVER ? '/api' : '';
+
+            // Get file info from video server or local disk
+            let fileExists = false;
+            let stats = null;
+            const ext = path.extname(movie.videoFile).toLowerCase() || '.mp4';
+            if (USE_VIDEO_SERVER) {
+                // For video server, use stored videoSize if available
+                fileExists = !!movie.videoFile;
+                stats = movie.videoSize ? { size: movie.videoSize } : null;
+            } else {
+                const filePath = path.join(MOVIES_DIR, movie.videoFile);
+                fileExists = fs.existsSync(filePath);
+                stats = fileExists ? fs.statSync(filePath) : null;
+            }
             const safeTitle = (movie.title || 'movie').replace(/[^\w\- ]+/g, '').trim() || 'movie';
             const filename = `${safeTitle}${ext}`;
             const fileInfo = `${formatBytes(stats ? stats.size : 0)}${stats ? ' · ' + ext.replace('.', '').toUpperCase() : ''}`;
 
             let dbHtml = sanitizeDesignHtml(movie.downloadPageHtml || '');
-            const dbBtn = `<a class="dl-btn" href="${origin}/download/${movie.streamToken}" rel="noopener nofollow">⬇ Download Movie</a>`;
+            const dbBtn = `<a class="dl-btn" href="${videoBase}${videoApi}/download/${movie.videoFile}" rel="noopener nofollow">⬇ Download Movie</a>`;
             dbHtml = dbHtml
                 .split('{{TITLE}}').join(movie.title || '')
-                .split('{{POSTER}}').join(movie.posterFile ? `${origin}/poster/${movie.posterFile}` : '')
-                .split('{{BRAND}}').join(movie.brandFile ? `${origin}/poster/${movie.brandFile}` : '')
+                .split('{{POSTER}}').join(movie.posterFile ? `${videoBase}${videoApi}/file/${movie.posterFile}` : '')
+                .split('{{BRAND}}').join(movie.brandFile ? `${videoBase}${videoApi}/file/${movie.brandFile}` : '')
                 .split('{{DESCRIPTION}}').join(movie.description || '')
                 .split('{{GENRE}}').join(movie.genre || '')
                 .split('{{YEAR}}').join(movie.year ? String(movie.year) : '')
                 .split('{{DOWNLOAD_BUTTON}}').join(dbBtn);
 
             if (!dbHtml.trim()) {
-                const posterSrc = movie.posterFile ? `${origin}/poster/${movie.posterFile}` : '';
+                const posterSrc = movie.posterFile ? `${videoBase}${videoApi}/file/${movie.posterFile}` : '';
                 dbHtml = `
                     <div class="default-hero">
                         ${movie.posterFile ? `<img class="poster" src="${posterSrc}" alt="${movie.title || 'Poster'}">` : ''}
@@ -963,8 +1085,8 @@ const server = http.createServer(async (req, res) => {
                 .replace(/__PAGE_TITLE__/g, `Download ${movie.title}`)
                 .replace(/__CUSTOM_CSS__/g, movie.downloadPageCss || '')
                 .replace(/__CUSTOM_BODY__/g, dbHtml)
-                .replace(/__POSTER_URL__/g, () => movie.posterFile ? `${origin}/poster/${movie.posterFile}` : '')
-                .replace(/__BRAND_URL__/g, () => movie.brandFile ? `${origin}/poster/${movie.brandFile}` : '')
+                .replace(/__POSTER_URL__/g, () => movie.posterFile ? `${videoBase}${videoApi}/file/${movie.posterFile}` : '')
+                .replace(/__BRAND_URL__/g, () => movie.brandFile ? `${videoBase}${videoApi}/file/${movie.brandFile}` : '')
                 .replace(/__DESCRIPTION__/g, () => movie.description || '')
                 .replace(/__GENRE__/g, () => movie.genre || 'Other')
                 .replace(/__YEAR__/g, () => movie.year ? String(movie.year) : '—')
@@ -980,7 +1102,7 @@ const server = http.createServer(async (req, res) => {
                 .replace(/__FOOTER_NOTE__/g, (!denied && disabled) ? 'Downloads are disabled by the owner.' : '')
                 .replace(/__TITLE__/g, () => movie.title || '')
                 .replace(/__FILE_INFO__/g, fileInfo)
-                .replace(/__DOWNLOAD_URL__/g, `${origin}/download/${movie.streamToken}`)
+                .replace(/__DOWNLOAD_URL__/g, `${videoBase}${videoApi}/download/${movie.videoFile}`)
                 .replace(/__FILENAME__/g, filename);
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.end(html);
@@ -1163,12 +1285,20 @@ const server = http.createServer(async (req, res) => {
 
             const movies = readJSON(MOVIES_FILE).filter(m => m.userEmail && m.userEmail.toLowerCase() === email.toLowerCase());
             let totalUsed = 0;
-            for (const m of movies) {
-                const fp = path.join(MOVIES_DIR, m.videoFile);
-                if (fs.existsSync(fp)) totalUsed += fs.statSync(fp).size;
-                if (m.posterFile) {
-                    const pp = path.join(MOVIES_DIR, m.posterFile);
-                    if (fs.existsSync(pp)) totalUsed += fs.statSync(pp).size;
+            if (USE_VIDEO_SERVER) {
+                // Use stored videoSize from movie metadata
+                for (const m of movies) {
+                    if (m.videoSize) totalUsed += m.videoSize;
+                    // Poster/sticker sizes are small, estimate from metadata or skip
+                }
+            } else {
+                for (const m of movies) {
+                    const fp = path.join(MOVIES_DIR, m.videoFile);
+                    if (fs.existsSync(fp)) totalUsed += fs.statSync(fp).size;
+                    if (m.posterFile) {
+                        const pp = path.join(MOVIES_DIR, m.posterFile);
+                        if (fs.existsSync(pp)) totalUsed += fs.statSync(pp).size;
+                    }
                 }
             }
             const remaining = Math.max(0, STORAGE_LIMIT - totalUsed);
@@ -1205,10 +1335,12 @@ const server = http.createServer(async (req, res) => {
                 const downloadUrl = (movie.downloadAccess || 'none') !== 'none' && canDownloadMovie(movie, embedEmail)
                     ? `${origin}/download-page/${movie.id}`
                     : '';
+                const videoBase = USE_VIDEO_SERVER ? VIDEO_SERVER_URL : origin;
+                const videoApi = USE_VIDEO_SERVER ? '/api' : '';
                 html = html
-                    .replace(/__STREAM_URL__/g, `${origin}/stream/${token}`)
-                    .replace(/__POSTER_URL__/g, movie.posterFile ? `${origin}/poster/${movie.posterFile}` : '')
-                    .replace(/__BRAND_URL__/g, movie.brandFile ? `${origin}/poster/${movie.brandFile}` : '')
+                    .replace(/__STREAM_URL__/g, `${videoBase}${videoApi}/stream/${movie.videoFile}`)
+                    .replace(/__POSTER_URL__/g, movie.posterFile ? `${videoBase}${videoApi}/file/${movie.posterFile}` : '')
+                    .replace(/__BRAND_URL__/g, movie.brandFile ? `${videoBase}${videoApi}/file/${movie.brandFile}` : '')
                     .replace(/__DOWNLOAD_URL__/g, downloadUrl)
                     .replace(/__TITLE__/g, title)
                     .replace(/__LINK__/g, `${origin}/watch.html?id=${movie.id}`);
