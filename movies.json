@@ -1,20 +1,20 @@
-{
-    "id":  "11111111-1111-4111-8111-111111111111",
-    "title":  "Test Movie",
-    "description":  "A mysterious force knocks the Moon from its orbit and sends it hurtling on a collision course toward Earth. A ragtag team attempts a desperate mission to save the world.",
-    "genre":  "Sci-Fi",
-    "year":  2026,
-    "videoFile":  "88c9b29c-8caa-4387-8630-914cba5cb5f9.mp4",
-    "posterFile":  "sticker_d9c9405f-d127-44bf-b497-bbef181abb39.png",
-    "brandFile":  null,
-    "userEmail":  "kennyselleman@gmail.com",
-    "uploadDate":  "2026-09-12T12:00:00.000Z",
-    "views":  12,
-    "streamToken":  "mockstreamtoken000000000000",
-    "downloadAccess":  "permission",
-    "downloadAllowedEmails":  [
-                                  "nobody@no.com"
-                              ],
-    "downloadPageHtml":  "",
-    "downloadPageCss":  ""
-}
+[
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "title": "Test Movie",
+    "description": "A mysterious force knocks the Moon from its orbit and sends it hurtling on a collision course toward Earth. A ragtag team attempts a desperate mission to save the world.",
+    "genre": "Sci-Fi",
+    "year": 2026,
+    "videoFile": "88c9b29c-8caa-4387-8630-914cba5cb5f9.mp4",
+    "posterFile": "sticker_d9c9405f-d127-44bf-b497-bbef181abb39.png",
+    "brandFile": null,
+    "userEmail": "kennyselleman@gmail.com",
+    "uploadDate": "2026-09-12T12:00:00.000Z",
+    "views": 12,
+    "streamToken": "mockstreamtoken000000000000",
+    "downloadAccess": "permission",
+    "downloadAllowedEmails": ["nobody@no.com"],
+    "downloadPageHtml": "",
+    "downloadPageCss": ""
+  }
+]
