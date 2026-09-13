@@ -597,7 +597,7 @@ if (uploadForm) {
     submitBtn.innerText = 'Uploading...';
 
     try {
-      // Determine if video server is available
+      // 1) Try video server first, fall back to Render
       let uploadUrl = `${API_BASE_URL}/upload/video`;
       let uploadHeaders = {};
       let useVideoServer = false;
@@ -614,24 +614,43 @@ if (uploadForm) {
             uploadHeaders = {
               'X-Upload-Token': tokenData.token,
               'X-File-Type': 'video',
-              '_uploadUrl': tokenData.uploadUrl  // Internal: reused for poster/sticker
+              '_uploadUrl': tokenData.uploadUrl
             };
             useVideoServer = true;
           }
         }
-      } catch (e) {
-        // Fall back to legacy upload if video server not available
+      } catch (e) {}
+
+      document.getElementById('video-progress-row').style.display = 'flex';
+
+      let videoResult;
+      try {
+        videoResult = await uploadWithProgress(
+          videoFile, uploadUrl,
+          document.getElementById('video-progress'),
+          document.getElementById('video-progress-text'),
+          videoFile.name,
+          useVideoServer ? uploadHeaders : undefined
+        );
+      } catch (serverError) {
+        if (useVideoServer) {
+          // Video server failed, fall back to Render
+          useVideoServer = false;
+          uploadUrl = `${API_BASE_URL}/upload/video`;
+          uploadHeaders = {};
+          document.getElementById('video-progress').style.width = '0%';
+          document.getElementById('video-progress-text').textContent = 'Retrying via server...';
+          videoResult = await uploadWithProgress(
+            videoFile, uploadUrl,
+            document.getElementById('video-progress'),
+            document.getElementById('video-progress-text'),
+            videoFile.name
+          );
+        } else {
+          throw serverError;
+        }
       }
 
-      // 1) Upload video (streamed to local disk) — always the original file, format never changes
-      document.getElementById('video-progress-row').style.display = 'flex';
-      const videoResult = await uploadWithProgress(
-        videoFile, uploadUrl,
-        document.getElementById('video-progress'),
-        document.getElementById('video-progress-text'),
-        videoFile.name,
-        useVideoServer ? uploadHeaders : undefined
-      );
       if (!videoResult.ok) {
         const data = JSON.parse(videoResult.response || '{}');
         throw new Error(data.error || 'Video upload failed');
@@ -644,19 +663,22 @@ if (uploadForm) {
         let posterUrl = `${API_BASE_URL}/upload/poster`;
         let posterHeaders = undefined;
         if (useVideoServer) {
-          // Reuse the upload URL and token (valid for 1 hour)
           posterUrl = `${uploadHeaders._uploadUrl}/api/upload`;
           posterHeaders = {
             'X-Upload-Token': uploadHeaders['X-Upload-Token'],
             'X-File-Type': 'poster'
           };
         }
-        const posterResult = await uploadWithProgress(posterFile, posterUrl, null, null, posterFile.name, posterHeaders);
-        if (!posterResult.ok) {
-          const data = JSON.parse(posterResult.response || '{}');
-          throw new Error(data.error || 'Poster upload failed');
+        try {
+          const posterResult = await uploadWithProgress(posterFile, posterUrl, null, null, posterFile.name, posterHeaders);
+          if (!posterResult.ok) {
+            const data = JSON.parse(posterResult.response || '{}');
+            throw new Error(data.error || 'Poster upload failed');
+          }
+          posterFileResult = JSON.parse(posterResult.response);
+        } catch (e) {
+          console.error('Poster upload failed:', e.message);
         }
-        posterFileResult = JSON.parse(posterResult.response);
       }
 
       // 2b) Optional custom sticker
@@ -671,12 +693,16 @@ if (uploadForm) {
             'X-File-Type': 'brand'
           };
         }
-        const stickerResult = await uploadWithProgress(stickerFile, stickerUrl, null, null, stickerFile.name, stickerHeaders);
-        if (!stickerResult.ok) {
-          const data = JSON.parse(stickerResult.response || '{}');
-          throw new Error(data.error || 'Sticker upload failed');
+        try {
+          const stickerResult = await uploadWithProgress(stickerFile, stickerUrl, null, null, stickerFile.name, stickerHeaders);
+          if (!stickerResult.ok) {
+            const data = JSON.parse(stickerResult.response || '{}');
+            throw new Error(data.error || 'Sticker upload failed');
+          }
+          stickerFileResult = JSON.parse(stickerResult.response);
+        } catch (e) {
+          console.error('Sticker upload failed:', e.message);
         }
-        stickerFileResult = JSON.parse(stickerResult.response);
       }
 
       // 3) Save movie metadata
