@@ -270,8 +270,20 @@ const mimeTypes = {
 
 // --- Movie helpers ---
 const publicMovie = (m, origin) => {
-    const base = USE_VIDEO_SERVER ? VIDEO_SERVER_URL : (origin || '');
-    const apiPrefix = USE_VIDEO_SERVER ? '/api' : '';
+    let isVideoServer;
+    if (m.videoStorage) {
+        isVideoServer = m.videoStorage === 'video_server';
+    } else if (USE_VIDEO_SERVER) {
+        const localFile = path.join(MOVIES_DIR, m.videoFile);
+        isVideoServer = !fs.existsSync(localFile);
+    } else {
+        isVideoServer = false;
+    }
+    const base = isVideoServer ? VIDEO_SERVER_URL : (origin || '');
+    const apiPrefix = isVideoServer ? '/api' : '';
+    const streamPath = isVideoServer ? `/stream/${m.videoFile}` : `/stream/${m.streamToken}`;
+    const posterPath = isVideoServer ? `/file/${m.posterFile}` : `/poster/${m.posterFile}`;
+    const brandPath = isVideoServer ? `/file/${m.brandFile}` : `/poster/${m.brandFile}`;
     return {
         id: m.id,
         title: m.title,
@@ -282,9 +294,10 @@ const publicMovie = (m, origin) => {
         uploadDate: m.uploadDate,
         views: m.views || 0,
         videoSize: m.videoSize || null,
-        posterUrl: m.posterFile ? `${base}${apiPrefix}/file/${m.posterFile}` : null,
-        brandUrl: m.brandFile ? `${base}${apiPrefix}/file/${m.brandFile}` : null,
-        streamUrl: `${base}${apiPrefix}/stream/${m.videoFile}`,
+        videoStorage: m.videoStorage || (isVideoServer ? 'video_server' : 'render'),
+        posterUrl: m.posterFile ? `${base}${apiPrefix}${posterPath}` : null,
+        brandUrl: m.brandFile ? `${base}${apiPrefix}${brandPath}` : null,
+        streamUrl: `${base}${apiPrefix}${streamPath}`,
         embedUrl: `${(origin || '')}/embed/${m.streamToken}`,
         downloadPageUrl: `${(origin || '')}/download-page/${m.id}`,
         downloadUrl: `${base}${apiPrefix}/download/${m.videoFile}`,
@@ -781,7 +794,7 @@ const server = http.createServer(async (req, res) => {
             }
 
             const body = await parseBody(req);
-            const { title, description, genre, year, videoFile, posterFile, brandFile, videoSize, downloadAccess, downloadAllowedEmails, downloadPageHtml, downloadPageCss } = body;
+            const { title, description, genre, year, videoFile, posterFile, brandFile, videoSize, videoStorage, downloadAccess, downloadAllowedEmails, downloadPageHtml, downloadPageCss } = body;
 
             if (!title || !videoFile) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -809,6 +822,7 @@ const server = http.createServer(async (req, res) => {
                 posterFile: posterFile ? path.basename(posterFile) : null,
                 brandFile: brandFile ? path.basename(brandFile) : null,
                 videoSize: typeof videoSize === 'number' ? videoSize : null,
+                videoStorage: ['video_server', 'render'].includes(videoStorage) ? videoStorage : (USE_VIDEO_SERVER ? 'video_server' : 'render'),
                 userEmail: email,
                 uploadDate: new Date().toISOString(),
                 views: 0,
@@ -905,10 +919,11 @@ const server = http.createServer(async (req, res) => {
             writeJSON(MOVIES_FILE, movies);
 
             // Delete files from video server or local disk
+            const movieDelIsVideoServer = movie.videoStorage === 'video_server' || (!movie.videoStorage && USE_VIDEO_SERVER);
             for (const f of [movie.videoFile, movie.posterFile, movie.brandFile]) {
                 if (!f) continue;
                 const safeName = path.basename(f);
-                if (USE_VIDEO_SERVER) {
+                if (movieDelIsVideoServer) {
                     // Delete from video server via API
                     try {
                         await videoServerRequest('DELETE', `/api/file/${encodeURIComponent(safeName)}`, VIDEO_SERVER_API_KEY);
@@ -1031,14 +1046,23 @@ const server = http.createServer(async (req, res) => {
             if (access === 'permission') allowed = isOwner || isAllowed;
             if (access === 'none') allowed = !!isOwner;
 
-            const videoBase = USE_VIDEO_SERVER ? VIDEO_SERVER_URL : origin;
-            const videoApi = USE_VIDEO_SERVER ? '/api' : '';
+            let movieIsVideoServer;
+            if (movie.videoStorage) {
+                movieIsVideoServer = movie.videoStorage === 'video_server';
+            } else if (USE_VIDEO_SERVER) {
+                const localFile = path.join(MOVIES_DIR, movie.videoFile);
+                movieIsVideoServer = !fs.existsSync(localFile);
+            } else {
+                movieIsVideoServer = false;
+            }
+            const videoBase = movieIsVideoServer ? VIDEO_SERVER_URL : origin;
+            const videoApi = movieIsVideoServer ? '/api' : '';
 
             // Get file info from video server or local disk
             let fileExists = false;
             let stats = null;
             const ext = path.extname(movie.videoFile).toLowerCase() || '.mp4';
-            if (USE_VIDEO_SERVER) {
+            if (movieIsVideoServer) {
                 // For video server, use stored videoSize if available
                 fileExists = !!movie.videoFile;
                 stats = movie.videoSize ? { size: movie.videoSize } : null;
@@ -1285,20 +1309,16 @@ const server = http.createServer(async (req, res) => {
 
             const movies = readJSON(MOVIES_FILE).filter(m => m.userEmail && m.userEmail.toLowerCase() === email.toLowerCase());
             let totalUsed = 0;
-            if (USE_VIDEO_SERVER) {
-                // Use stored videoSize from movie metadata
-                for (const m of movies) {
-                    if (m.videoSize) totalUsed += m.videoSize;
-                    // Poster/sticker sizes are small, estimate from metadata or skip
-                }
-            } else {
-                for (const m of movies) {
+            for (const m of movies) {
+                if (m.videoSize) {
+                    totalUsed += m.videoSize;
+                } else {
                     const fp = path.join(MOVIES_DIR, m.videoFile);
                     if (fs.existsSync(fp)) totalUsed += fs.statSync(fp).size;
-                    if (m.posterFile) {
-                        const pp = path.join(MOVIES_DIR, m.posterFile);
-                        if (fs.existsSync(pp)) totalUsed += fs.statSync(pp).size;
-                    }
+                }
+                if (m.posterFile) {
+                    const mp = m.videoStorage === 'video_server' || (!m.videoStorage && USE_VIDEO_SERVER) ? null : path.join(MOVIES_DIR, m.posterFile);
+                    if (mp && fs.existsSync(mp)) totalUsed += fs.statSync(mp).size;
                 }
             }
             const remaining = Math.max(0, STORAGE_LIMIT - totalUsed);
@@ -1335,12 +1355,24 @@ const server = http.createServer(async (req, res) => {
                 const downloadUrl = (movie.downloadAccess || 'none') !== 'none' && canDownloadMovie(movie, embedEmail)
                     ? `${origin}/download-page/${movie.id}`
                     : '';
-                const videoBase = USE_VIDEO_SERVER ? VIDEO_SERVER_URL : origin;
-                const videoApi = USE_VIDEO_SERVER ? '/api' : '';
+                let movieIsVideoServer;
+                if (movie.videoStorage) {
+                    movieIsVideoServer = movie.videoStorage === 'video_server';
+                } else if (USE_VIDEO_SERVER) {
+                    const localFile = path.join(MOVIES_DIR, movie.videoFile);
+                    movieIsVideoServer = !fs.existsSync(localFile);
+                } else {
+                    movieIsVideoServer = false;
+                }
+                const videoBase = movieIsVideoServer ? VIDEO_SERVER_URL : origin;
+                const videoApi = movieIsVideoServer ? '/api' : '';
+                const embedStreamPath = movieIsVideoServer ? `/stream/${movie.videoFile}` : `/stream/${movie.streamToken}`;
+                const embedPosterPath = movieIsVideoServer ? `/file/${movie.posterFile}` : `/poster/${movie.posterFile}`;
+                const embedBrandPath = movieIsVideoServer ? `/file/${movie.brandFile}` : `/poster/${movie.brandFile}`;
                 html = html
-                    .replace(/__STREAM_URL__/g, `${videoBase}${videoApi}/stream/${movie.videoFile}`)
-                    .replace(/__POSTER_URL__/g, movie.posterFile ? `${videoBase}${videoApi}/file/${movie.posterFile}` : '')
-                    .replace(/__BRAND_URL__/g, movie.brandFile ? `${videoBase}${videoApi}/file/${movie.brandFile}` : '')
+                    .replace(/__STREAM_URL__/g, `${videoBase}${videoApi}${embedStreamPath}`)
+                    .replace(/__POSTER_URL__/g, movie.posterFile ? `${videoBase}${videoApi}${embedPosterPath}` : '')
+                    .replace(/__BRAND_URL__/g, movie.brandFile ? `${videoBase}${videoApi}${embedBrandPath}` : '')
                     .replace(/__DOWNLOAD_URL__/g, downloadUrl)
                     .replace(/__TITLE__/g, title)
                     .replace(/__LINK__/g, `${origin}/watch.html?id=${movie.id}`);

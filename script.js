@@ -719,6 +719,7 @@ if (uploadForm) {
           posterFile: posterFileResult ? (posterFileResult.filename || posterFileResult.posterFile) : null,
           brandFile: stickerFileResult ? (stickerFileResult.filename || stickerFileResult.brandFile) : null,
           videoSize: vidData.size || videoFile.size,
+          videoStorage: useVideoServer ? 'video_server' : 'render',
           downloadAccess: dlEnabled && dlEnabled.checked ? dlAccess.value : 'none',
           downloadAllowedEmails: document.getElementById('download-emails').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).slice(0, 100),
           downloadPageHtml: document.getElementById('dl-html').value,

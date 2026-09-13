@@ -246,19 +246,21 @@ a{color:#e50914;}</style></head><body>
 
             const chunksize = (end - start) + 1;
             res.writeHead(206, {
-                'Content-Range': `bytes ${start}-${end}/${stats.size}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunksize,
-                'Content-Type': contentType,
-                'Cache-Control': 'public, max-age=86400'
-            });
-            fs.createReadStream(filePath, { start, end }).pipe(res);
+                    'Content-Range': `bytes ${start}-${end}/${stats.size}`,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunksize,
+                    'Content-Type': contentType,
+                    'Cache-Control': 'public, max-age=86400',
+                    'Access-Control-Allow-Origin': '*'
+                });
+                fs.createReadStream(filePath, { start, end }).pipe(res);
         } else {
             res.writeHead(200, {
                 'Content-Length': stats.size,
                 'Content-Type': contentType,
                 'Accept-Ranges': 'bytes',
-                'Cache-Control': 'public, max-age=86400'
+                'Cache-Control': 'public, max-age=86400',
+                'Access-Control-Allow-Origin': '*'
             });
             fs.createReadStream(filePath).pipe(res);
         }
